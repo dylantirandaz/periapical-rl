@@ -1,0 +1,1 @@
+{"id":"s-rl-films","name":"RL on 2x tiles, whole-film episodes","stage":"rl","model":"Inkling-Small","max_steps":31,"live":true,"updated":1790542670,"current_step":0,"steps":[],"evals":[],"loss":[],"rollout_steps":[],"eval_views":[]}
