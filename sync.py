@@ -11,6 +11,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from datasets import Image, load_dataset
+from huggingface_hub import snapshot_download
 from PIL import Image as PILImage
 
 from periapical_lesions.taskset import parse_lesions
@@ -19,6 +20,7 @@ DATASET = "tirandazdylan/periapical-lesions-pai"
 SPLITS = ("train", "validation", "test")
 EVAL_SPLITS = ("validation", "test")
 SITE = Path(__file__).resolve().parent
+DATA_DIR = Path.home() / ".cache" / "periapical-lesions-pai"
 THUMB_WIDTH = 720
 INTERVAL_S = 90
 LIVE_WINDOW_S = 900
@@ -29,7 +31,9 @@ def load_films() -> dict:
     """Film name -> (split rows, row index), across every split."""
     films = {}
     for split in SPLITS:
-        rows = load_dataset(DATASET, data_files={split: f"data/{split}-*.parquet"}, split=split)
+        if not any(DATA_DIR.glob(f"data/{split}-*.parquet")):
+            snapshot_download(DATASET, repo_type="dataset", local_dir=DATA_DIR, allow_patterns=["data/*.parquet"])
+        rows = load_dataset("parquet", data_files={split: str(DATA_DIR / f"data/{split}-*.parquet")}, split=split)
         rows = rows.cast_column("image", Image(decode=False))
         films.update({name: (rows, i) for i, name in enumerate(rows["image_id"])})
     return films

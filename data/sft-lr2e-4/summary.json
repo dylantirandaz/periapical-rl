@@ -1,0 +1,1 @@
+{"id":"sft-lr2e-4","name":"Fine-tuning, learning rate 2e-4","stage":"fine-tuning","model":"Inkling","max_steps":483,"live":true,"updated":1790485207,"current_step":0,"steps":[],"evals":[],"loss":[],"rollout_steps":[],"eval_views":[]}
