@@ -47,7 +47,8 @@ def read_jsonl(path: Path) -> list[dict]:
 
 def summarize(args, run_dir: Path) -> tuple[dict, dict[int, list[dict]]]:
     metrics = read_jsonl(run_dir / "metrics.jsonl")
-    steps = [{"step": m["step"], "reward": m["env/all/reward"], "lesion_f1": m.get("env/all/lesion_f1", 0),
+    steps = [{"step": m["step"], "reward": m.get("env/all/train_reward", m["env/all/reward"]),
+              "benchmark": m["env/all/reward"], "lesion_f1": m.get("env/all/lesion_f1", 0),
               "pai_accuracy": m.get("env/all/pai_accuracy", 0), "parsed": m.get("env/all/parsed", 0)}
              for m in metrics if "env/all/reward" in m]
     tests = [{"step": m["step"], **{k.removeprefix("test/"): v for k, v in m.items() if k.startswith("test/")}}
@@ -82,7 +83,8 @@ def sync_once(args, rows, index) -> dict:
     for step, events in rollouts.items():
         by_film = defaultdict(list)
         for event in events:
-            by_film[event["film"]].append({k: event[k] for k in ("reward", "lesions", "parsed", "lesion_f1", "pai_accuracy")})
+            by_film[event["film"]].append({k: event[k] for k in ("reward", "lesions", "parsed", "lesion_f1", "pai_accuracy")}
+                                  | {"train_reward": event.get("train_reward", event["reward"])})
         write_json(data / "steps" / f"{step:04d}.json",
                    [{**film_record(rows, index, film), "rollouts": attempts} for film, attempts in by_film.items()])
     write_json(data / "summary.json", summary)

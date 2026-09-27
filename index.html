@@ -81,7 +81,7 @@
     <span class="status" id="status"><i></i><span id="status-text">Loading</span></span>
     <div class="meta" id="meta"></div>
   </header>
-  <p class="about">Inkling is learning, by reinforcement, to find infections at the tips of tooth roots on dental X-rays and rate how severe they are. Every step it tries 16 X-rays 8 times each. An answer scores 1.0 when every box it draws overlaps the dentists' box and every severity matches; half the score is the boxes, half the severities.</p>
+  <p class="about">Inkling is learning, by reinforcement, to find infections at the tips of tooth roots on dental X-rays and rate how severe they are. Every step it tries 16 X-rays 8 times each. The benchmark score is 1.0 only when every box overlaps the dentists' box and every severity matches (half boxes, half severities); the 387 held-out test X-rays are always scored this way. While training, Inkling also gets partial credit for boxes that come close and for readable answers, so it has something to learn from.</p>
 
   <div class="top">
     <div class="viewer">
@@ -96,7 +96,7 @@
       <div class="label"><span id="step-label">Step</span><span id="step-count"></span></div>
       <div class="grid" id="grid"></div>
       <div class="legend" style="margin-top:10px">
-        <span><i class="cell" style="background:var(--s0)"></i>0</span>
+        <span>training score</span><span><i class="cell" style="background:var(--s0)"></i>0</span>
         <span><i class="cell" style="background:var(--s2)"></i>0.5</span>
         <span><i class="cell" style="background:var(--s4)"></i>1.0</span>
         <span><i class="cell" style="box-shadow:inset 0 0 0 1.5px var(--pink-ink)"></i>unreadable answer</span>
@@ -109,8 +109,8 @@
     <div class="label"><span>Score</span><span id="chart-note"></span></div>
     <svg class="chart" id="chart-svg" viewBox="0 0 1000 240" role="img" aria-label="Average score per training step and on the held-out test X-rays"></svg>
     <div class="legend" style="margin-top:8px">
-      <span><i class="sw" style="border-color:var(--mint-ink);height:0;border-width:1px 0 1px"></i>training answers, mean per step</span>
-      <span><i class="cell" style="background:var(--pink-ink);border-radius:50%;width:9px;height:9px"></i>387 held-out test X-rays</span>
+      <span><i class="sw" style="border-color:var(--mint-ink);height:0;border-width:1px 0 1px"></i>training score, mean per step</span>
+      <span><i class="cell" style="background:var(--pink-ink);border-radius:50%;width:9px;height:9px"></i>benchmark score on 387 held-out test X-rays</span>
       <span>· click a step to look back</span>
     </div>
   </section>
@@ -139,6 +139,7 @@
     return node;
   };
   const shade = (r) => `var(--s${Math.min(4, Math.round(r * 4))})`;
+  const trainScore = (a) => a.train_reward ?? a.reward;
   const fetchJson = async (path) => {
     const res = await fetch(`${path}?t=${Date.now()}`);
     if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);
@@ -176,7 +177,7 @@
     box.append(img, svg);
     const grades = film.pai.map((p) => `PAI ${p}`).join(", ");
     $("caption").textContent = attempt
-      ? `X-ray ${film.film} · attempt ${idx + 1} · score ${attempt.reward.toFixed(2)} · dentists: ${grades}` +
+      ? `X-ray ${film.film} · attempt ${idx + 1} · training ${trainScore(attempt).toFixed(2)} · benchmark ${attempt.reward.toFixed(2)} · dentists: ${grades}` +
         (attempt.parsed ? ` · Inkling: ${attempt.lesions.map((l) => `PAI ${l.pai}`).join(", ") || "no lesions"}` : " · answer could not be read")
       : `X-ray ${film.film} · dentists: ${grades}`;
   }
@@ -193,11 +194,11 @@
       for (let i = 0; i < GROUP_SIZE; i++) {
         const a = film.rollouts[i];
         const b = el("button", { type: "button", class: "cellbtn" + (a ? (a.parsed ? "" : " unparsed") : " pending"),
-          "aria-label": a ? `X-ray ${film.film}, attempt ${i + 1}, score ${a.reward.toFixed(2)}` : "still running" });
+          "aria-label": a ? `X-ray ${film.film}, attempt ${i + 1}, training score ${trainScore(a).toFixed(2)}` : "still running" });
         if (a) {
-          b.style.background = shade(a.reward);
+          b.style.background = shade(trainScore(a));
           b.addEventListener("click", () => { selected = { film: film.film, idx: i }; renderFilm(film, a, i); markSelected(); });
-          b.addEventListener("mousemove", (e) => tip(e, `score ${a.reward.toFixed(2)} · boxes ${a.lesion_f1.toFixed(2)} · severity ${a.pai_accuracy.toFixed(2)}`));
+          b.addEventListener("mousemove", (e) => tip(e, `training ${trainScore(a).toFixed(2)} · benchmark ${a.reward.toFixed(2)}`));
           b.addEventListener("mouseleave", (e) => tip(e, null));
           b.dataset.key = `${film.film}:${i}`;
         } else b.disabled = true;
@@ -208,7 +209,7 @@
     const keep = selected && films.find((f) => f.film === selected.film);
     if (keep && keep.rollouts[selected.idx]) renderFilm(keep, keep.rollouts[selected.idx], selected.idx);
     else {
-      const best = films.flatMap((f) => f.rollouts.map((a, i) => ({ f, a, i }))).sort((x, y) => y.a.reward - x.a.reward)[0];
+      const best = films.flatMap((f) => f.rollouts.map((a, i) => ({ f, a, i }))).sort((x, y) => trainScore(y.a) - trainScore(x.a))[0];
       if (best) { selected = { film: best.f.film, idx: best.i }; renderFilm(best.f, best.a, best.i); }
     }
     markSelected();
