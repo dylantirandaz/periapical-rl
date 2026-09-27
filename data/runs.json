@@ -1,1 +1,1 @@
-[{"id":"inkling-run2","name":"Training run #1","model":"Inkling","max_steps":100,"live":true,"updated":1790482411,"current_step":13},{"id":"inkling-pilot","name":"Pilot run","model":"Inkling","max_steps":10,"live":false,"updated":1790479032,"current_step":9}]
+[{"id":"inkling-run2","name":"Training run #1","model":"Inkling","max_steps":100,"live":true,"updated":1790482483,"current_step":14},{"id":"inkling-pilot","name":"Pilot run","model":"Inkling","max_steps":10,"live":false,"updated":1790479032,"current_step":9}]
