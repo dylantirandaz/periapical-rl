@@ -1,5 +1,5 @@
+/home/dylantirandaz/tinker-rl/runs/s-rl-pilot s-rl-pilot rl 31 Inkling-Small RL on 2x tiles (pilot)
+/home/dylantirandaz/tinker-rl/runs/s-tiles3x2-lr1e-4 s-tiles3x2-lr1e-4 fine-tuning 151 Inkling-Small Tiles 3x2 at 2x, fine-tuning continued
 /home/dylantirandaz/tinker-rl/runs/i-tiles3x2 i-tiles3x2 fine-tuning 151 Inkling Tiles 3x2 at 2x, from the whole-film fine-tune
-/home/dylantirandaz/tinker-rl/runs/s-tiles3x2-empty1.0 s-tiles3x2-empty1.0 fine-tuning 51 Inkling-Small Tiles 3x2 at 2x, real share of empty tiles (calibration test)
-/home/dylantirandaz/tinker-rl/runs/s-tiles4x2 s-tiles4x2 fine-tuning 151 Inkling-Small Tiles 4x2 at 1x (layout test)
 /home/dylantirandaz/tinker-rl/runs/s-tiles3x2 s-tiles3x2 fine-tuning 151 Inkling-Small Tiles 3x2 at 2x (layout test)
 /home/dylantirandaz/tinker-rl/runs/sft-lr4e-4 sft-lr4e-4 fine-tuning 483 Inkling Whole film, one call (fine-tuning)
