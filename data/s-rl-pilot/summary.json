@@ -1,1 +1,1 @@
-{"id":"s-rl-pilot","name":"RL on 2x tiles (pilot)","stage":"rl","model":"Inkling-Small","max_steps":31,"live":true,"updated":1790541210,"current_step":0,"steps":[],"evals":[],"loss":[],"rollout_steps":[],"eval_views":[]}
+{"id":"s-rl-pilot","name":"RL on 2x tiles (pilot)","stage":"rl","model":"Inkling-Small","max_steps":31,"live":true,"updated":1790541295,"current_step":0,"steps":[{"step":0,"reward":0.57121806763975,"benchmark":0.5657552083333334,"parsed":0.8828125}],"evals":[],"loss":[],"rollout_steps":[0],"eval_views":[]}
