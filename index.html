@@ -29,9 +29,9 @@
   .status.live i { background: #d6334a; animation: pulse 1.6s infinite; }
   .status.live { color: #d6334a; }
   @keyframes pulse { 50% { opacity: 0.35; } }
+  @media (prefers-reduced-motion: reduce) { .status.live i { animation: none; } }
   .meta { color: var(--mute); font-size: 0.85rem; display: flex; flex-wrap: wrap; gap: 4px 18px; }
-  .meta b { color: var(--ink); font-weight: 600; }
-  .about { color: var(--mute); max-width: 72ch; margin: 0 0 18px; line-height: 1.5; }
+  .about { color: var(--mute); max-width: 76ch; margin: 0 0 18px; line-height: 1.5; }
   .top { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 24px; align-items: start; }
   .viewer { display: grid; gap: 8px; }
   .film { position: relative; background: var(--film); border-radius: 4px; overflow: hidden; }
@@ -42,12 +42,13 @@
   .legend span { display: inline-flex; align-items: center; gap: 6px; }
   .legend .sw { width: 16px; height: 10px; border: 2px solid; border-radius: 1px; }
   .legend .cell { width: 12px; height: 12px; border-radius: 2px; }
-  .label { font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute); display: flex; justify-content: space-between; margin-bottom: 8px; }
+  .label { font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute); display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
   .grid { display: grid; gap: 4px; }
   .row { display: grid; grid-template-columns: 5.2rem repeat(8, minmax(0, 1fr)); gap: 4px; align-items: center; }
   .row .name { font-size: 0.78rem; color: var(--mute); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .row .name.dim { opacity: 0.5; }
-  .cellbtn { height: 22px; border: 0; border-radius: 3px; padding: 0; cursor: pointer; font-size: 0.66rem; color: transparent; }
+  .evalgrid { display: flex; flex-wrap: wrap; gap: 3px; }
+  .evalgrid .cellbtn { width: 15px; height: 15px; }
+  .cellbtn { height: 22px; border: 0; border-radius: 3px; padding: 0; cursor: pointer; }
   .cellbtn:hover { outline: 2px solid var(--ink); }
   .cellbtn.sel { outline: 2px solid var(--pink-ink); }
   .cellbtn.unparsed { background: var(--paper) !important; box-shadow: inset 0 0 0 1.5px var(--pink-ink); }
@@ -81,7 +82,7 @@
     <span class="status" id="status"><i></i><span id="status-text">Loading</span></span>
     <div class="meta" id="meta"></div>
   </header>
-  <p class="about">Inkling is learning, by reinforcement, to find infections at the tips of tooth roots on dental X-rays and rate how severe they are. Every step it tries 16 X-rays 8 times each. The benchmark score is 1.0 only when every box overlaps the dentists' box and every severity matches (half boxes, half severities); the 387 held-out test X-rays are always scored this way. While training, Inkling also gets partial credit for boxes that come close and for readable answers, so it has something to learn from.</p>
+  <p class="about">Inkling is learning to find infections at the tips of tooth roots on dental X-rays and rate how severe they are, in two stages. First it is fine-tuned on 2,587 X-rays the dentists labelled; then reinforcement learning practises on 500 X-rays it has not seen, 16 at a time, 8 tries each. The benchmark score is 1.0 only when every box overlaps the dentists' box and every severity matches (half boxes, half severities). Progress is measured on 389 validation X-rays; the 387 test X-rays are scored once, at the end. Dentists checked against each other score 0.84.</p>
 
   <div class="top">
     <div class="viewer">
@@ -94,9 +95,9 @@
     </div>
     <div>
       <div class="label"><span id="step-label">Step</span><span id="step-count"></span></div>
-      <div class="grid" id="grid"></div>
+      <div id="grid"></div>
       <div class="legend" style="margin-top:10px">
-        <span>training score</span><span><i class="cell" style="background:var(--s0)"></i>0</span>
+        <span id="cell-legend">score</span><span><i class="cell" style="background:var(--s0)"></i>0</span>
         <span><i class="cell" style="background:var(--s2)"></i>0.5</span>
         <span><i class="cell" style="background:var(--s4)"></i>1.0</span>
         <span><i class="cell" style="box-shadow:inset 0 0 0 1.5px var(--pink-ink)"></i>unreadable answer</span>
@@ -107,12 +108,8 @@
 
   <section id="chart">
     <div class="label"><span>Score</span><span id="chart-note"></span></div>
-    <svg class="chart" id="chart-svg" viewBox="0 0 1000 240" role="img" aria-label="Average score per training step and on the held-out test X-rays"></svg>
-    <div class="legend" style="margin-top:8px">
-      <span><i class="sw" style="border-color:var(--mint-ink);height:0;border-width:1px 0 1px"></i>training score, mean per step</span>
-      <span><i class="cell" style="background:var(--pink-ink);border-radius:50%;width:9px;height:9px"></i>benchmark score on 387 held-out test X-rays</span>
-      <span>· click a step to look back</span>
-    </div>
+    <svg class="chart" id="chart-svg" viewBox="0 0 1000 240" role="img" aria-label="Scores over training steps"></svg>
+    <div class="legend" style="margin-top:8px" id="chart-legend"></div>
   </section>
 
   <section id="runs">
@@ -126,6 +123,9 @@
 (() => {
   const POLL_MS = 30000;
   const GROUP_SIZE = 8;
+  const DENTISTS = 0.84;
+  const SPLIT_COLOR = { validation: "var(--pink-ink)", test: "var(--ink)" };
+  const SPLIT_SIZE = { validation: 389, test: 387 };
   const $ = (id) => document.getElementById(id);
   const el = (tag, attrs = {}, text) => {
     const node = document.createElement(tag);
@@ -138,7 +138,7 @@
     for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
     return node;
   };
-  const shade = (r) => `var(--s${Math.min(4, Math.round(r * 4))})`;
+  const shade = (r) => `var(--s${Math.max(0, Math.min(4, Math.round(r * 4)))})`;
   const trainScore = (a) => a.train_reward ?? a.reward;
   const fetchJson = async (path) => {
     const res = await fetch(`${path}?t=${Date.now()}`);
@@ -147,7 +147,10 @@
   };
 
   let runs = [], run = null, summary = null, viewStep = null, followLive = true, selected = null;
-  const stepCache = new Map();
+  const cache = new Map();
+
+  const evalsOf = (s) => s.evals || (s.tests || []).map((t) => ({ ...t, split: "test" }));
+  const stageName = (s) => (s.stage === "fine-tuning" ? "Stage 1 · fine-tuning" : s.stage === "rl" ? "Stage 2 · reinforcement learning" : "Reinforcement learning only");
 
   function tip(evt, text) {
     const t = $("tip");
@@ -160,72 +163,111 @@
     $("status").className = summary.live ? "status live" : "status";
     $("status-text").textContent = summary.live ? "Live" : "Finished";
     const meta = $("meta"); meta.replaceChildren();
-    const total = summary.steps.length * 16 * GROUP_SIZE;
-    [[summary.name, ""], [`Step ${summary.current_step} of ${summary.max_steps}`, ""], [summary.model, "model"],
-     [`${total.toLocaleString()} answers scored`, ""]].forEach(([text]) => meta.append(el("span", {}, text)));
+    const bits = [stageName(summary), summary.name, `Step ${summary.current_step} of ${summary.max_steps}`, summary.model];
+    const last = evalsOf(summary).filter((e) => e.split === "validation").slice(-1)[0];
+    if (last) bits.push(`validation score ${last.reward.toFixed(3)}`);
+    if (summary.loss && summary.loss.length) bits.push(`training loss ${summary.loss[0].nll.toFixed(3)}`);
+    bits.forEach((text) => meta.append(el("span", {}, text)));
   }
 
-  function renderFilm(film, attempt, idx) {
+  function renderFilm(film, answer, caption) {
     const box = $("film"); box.replaceChildren();
-    const img = el("img", { src: `films/${film.film}.jpg`, alt: `Dental X-ray ${film.film}` });
     const svg = svgEl("svg", { viewBox: "0 0 1 1", preserveAspectRatio: "none", "aria-hidden": "true" });
     const draw = (boxes, color, width) => boxes.forEach(([x0, y0, x1, y1]) => svg.append(svgEl("rect", {
       x: x0, y: y0, width: Math.max(0, x1 - x0), height: Math.max(0, y1 - y0), fill: "none", stroke: color,
       "stroke-width": width, "vector-effect": "non-scaling-stroke" })));
     draw(film.boxes, "var(--box-dentist)", 3);
-    if (attempt) draw(attempt.lesions.map((l) => l.box), "var(--box-agent)", 2.5);
-    box.append(img, svg);
+    if (answer) draw(answer.lesions.map((l) => l.box), "var(--box-agent)", 2.5);
+    box.append(el("img", { src: `films/${film.film}.jpg`, alt: `Dental X-ray ${film.film}` }), svg);
     const grades = film.pai.map((p) => `PAI ${p}`).join(", ");
-    $("caption").textContent = attempt
-      ? `X-ray ${film.film} · attempt ${idx + 1} · training ${trainScore(attempt).toFixed(2)} · benchmark ${attempt.reward.toFixed(2)} · dentists: ${grades}` +
-        (attempt.parsed ? ` · Inkling: ${attempt.lesions.map((l) => `PAI ${l.pai}`).join(", ") || "no lesions"}` : " · answer could not be read")
-      : `X-ray ${film.film} · dentists: ${grades}`;
+    const said = answer.parsed ? answer.lesions.map((l) => `PAI ${l.pai}`).join(", ") || "no lesions" : "answer could not be read";
+    $("caption").textContent = `X-ray ${film.film} · ${caption} · dentists: ${grades} · Inkling: ${said}`;
   }
 
-  function renderGrid(step, films) {
+  function cell(score, answer, label, onClick, key) {
+    const b = el("button", { type: "button", class: "cellbtn" + (answer.parsed ? "" : " unparsed"), "aria-label": label });
+    b.style.background = shade(score);
+    b.dataset.key = key;
+    b.addEventListener("click", onClick);
+    b.addEventListener("mousemove", (e) => tip(e, label));
+    b.addEventListener("mouseleave", (e) => tip(e, null));
+    return b;
+  }
+
+  function markSelected() {
+    document.querySelectorAll(".cellbtn").forEach((b) => b.classList.toggle("sel", selected === b.dataset.key));
+  }
+
+  function renderRollouts(step, films) {
     $("step-label").textContent = `Step ${step}` + (step === summary.current_step && summary.live ? " · running" : "");
+    $("cell-legend").textContent = "training score";
     const done = films.reduce((n, f) => n + f.rollouts.length, 0);
-    $("step-count").textContent = films.length ? `${done} of ${16 * GROUP_SIZE} answers scored` : "";
-    const grid = $("grid"); grid.replaceChildren();
-    if (!films.length) { grid.append(el("div", { class: "empty" }, "No per-answer detail for this step.")); return; }
+    $("step-count").textContent = `${done} of ${16 * GROUP_SIZE} answers scored`;
+    const grid = $("grid"); grid.className = "grid"; grid.replaceChildren();
+    let best = null;
     films.forEach((film) => {
       const row = el("div", { class: "row" });
       row.append(el("span", { class: "name" }, film.film));
       for (let i = 0; i < GROUP_SIZE; i++) {
         const a = film.rollouts[i];
-        const b = el("button", { type: "button", class: "cellbtn" + (a ? (a.parsed ? "" : " unparsed") : " pending"),
-          "aria-label": a ? `X-ray ${film.film}, attempt ${i + 1}, training score ${trainScore(a).toFixed(2)}` : "still running" });
-        if (a) {
-          b.style.background = shade(trainScore(a));
-          b.addEventListener("click", () => { selected = { film: film.film, idx: i }; renderFilm(film, a, i); markSelected(); });
-          b.addEventListener("mousemove", (e) => tip(e, `training ${trainScore(a).toFixed(2)} · benchmark ${a.reward.toFixed(2)}`));
-          b.addEventListener("mouseleave", (e) => tip(e, null));
-          b.dataset.key = `${film.film}:${i}`;
-        } else b.disabled = true;
-        row.append(b);
+        if (!a) { row.append(el("button", { type: "button", class: "cellbtn pending", disabled: "", "aria-label": "still running" })); continue; }
+        const key = `${film.film}:${i}`, caption = `attempt ${i + 1} · training ${trainScore(a).toFixed(2)} · benchmark ${a.reward.toFixed(2)}`;
+        const show = () => { selected = key; renderFilm(film, a, caption); markSelected(); };
+        row.append(cell(trainScore(a), a, `X-ray ${film.film}, ${caption}`, show, key));
+        if (!best || trainScore(a) > trainScore(best.a)) best = { a, show };
       }
       grid.append(row);
     });
-    const keep = selected && films.find((f) => f.film === selected.film);
-    if (keep && keep.rollouts[selected.idx]) renderFilm(keep, keep.rollouts[selected.idx], selected.idx);
-    else {
-      const best = films.flatMap((f) => f.rollouts.map((a, i) => ({ f, a, i }))).sort((x, y) => trainScore(y.a) - trainScore(x.a))[0];
-      if (best) { selected = { film: best.f.film, idx: best.i }; renderFilm(best.f, best.a, best.i); }
-    }
-    markSelected();
+    const current = grid.querySelector(`[data-key="${selected}"]`);
+    if (current) current.click(); else if (best) best.show();
   }
 
-  function markSelected() {
-    document.querySelectorAll(".cellbtn").forEach((b) => b.classList.toggle("sel", selected && b.dataset.key === `${selected.film}:${selected.idx}`));
+  function renderEval(view, films) {
+    const [split, stepText] = view.split("_"), step = Number(stepText);
+    $("step-label").textContent = `Step ${step} · ${split} check`;
+    $("cell-legend").textContent = "benchmark score";
+    const mean = films.reduce((s, f) => s + f.reward, 0) / films.length;
+    $("step-count").textContent = `${films.length} ${split} X-rays · mean ${mean.toFixed(3)}`;
+    const grid = $("grid"); grid.className = "evalgrid"; grid.replaceChildren();
+    let best = null;
+    films.forEach((film) => {
+      const key = `${view}:${film.film}`, caption = `${split} check at step ${step} · benchmark ${film.reward.toFixed(2)}`;
+      const show = () => { selected = key; renderFilm(film, film, caption); markSelected(); };
+      grid.append(cell(film.reward, film, `X-ray ${film.film}, benchmark ${film.reward.toFixed(2)}`, show, key));
+      if (!best || film.reward > best.film.reward) best = { film, show };
+    });
+    const current = grid.querySelector(`[data-key="${selected}"]`);
+    if (current) current.click(); else if (best) best.show();
+  }
+
+  async function showStep(step) {
+    const live = step === summary.current_step && summary.live;
+    if (summary.rollout_steps.includes(step)) {
+      const key = `steps/${String(step).padStart(4, "0")}`;
+      if (!cache.has(key) || live) cache.set(key, await fetchJson(`data/${run.id}/${key}.json`));
+      renderRollouts(step, cache.get(key));
+      return;
+    }
+    const views = (summary.eval_views || []).filter((v) => Number(v.split("_")[1]) <= step)
+      .sort((a, b) => Number(a.split("_")[1]) - Number(b.split("_")[1]));
+    const view = views[views.length - 1];
+    if (view) {
+      const key = `evals/${view}`;
+      if (!cache.has(key)) cache.set(key, await fetchJson(`data/${run.id}/${key}.json`));
+      renderEval(view, cache.get(key));
+      return;
+    }
+    $("step-label").textContent = `Step ${step}`; $("step-count").textContent = "";
+    $("grid").replaceChildren(el("div", { class: "empty" }, "No per-answer detail for this step yet."));
   }
 
   function renderChart() {
     const svg = $("chart-svg"); svg.replaceChildren();
     const W = 1000, H = 240, L = 44, R = 16, T = 12, B = 30;
-    const maxStep = Math.max(summary.max_steps, 1);
-    const values = [...summary.steps.map((s) => s.reward), ...summary.tests.map((t) => t.reward)];
-    const top = Math.max(0.1, Math.ceil(Math.max(0, ...values) * 1.25 * 20) / 20);
-    const x = (s) => L + (s / maxStep) * (W - L - R), y = (v) => T + (1 - v / top) * (H - T - B);
+    const maxStep = Math.max(summary.max_steps, 1), evals = evalsOf(summary);
+    const values = [...summary.steps.map((s) => s.reward), ...evals.map((t) => t.reward)];
+    const top = Math.min(1, Math.max(0.1, Math.ceil(Math.max(0, ...values) * 1.25 * 20) / 20));
+    const x = (s) => L + (s / maxStep) * (W - L - R), y = (v) => T + (1 - Math.min(v, top) / top) * (H - T - B);
     for (let i = 0; i <= 4; i++) {
       const v = (top * i) / 4;
       svg.append(svgEl("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: "var(--rule)" }));
@@ -234,12 +276,18 @@
     for (let s = 0; s <= maxStep; s += Math.max(1, Math.round(maxStep / 10))) {
       const t = svgEl("text", { x: x(s), y: H - 8, "text-anchor": "middle" }); t.textContent = s; svg.append(t);
     }
+    if (DENTISTS <= top) svg.append(svgEl("line", { x1: L, x2: W - R, y1: y(DENTISTS), y2: y(DENTISTS), stroke: "var(--mint-ink)", "stroke-dasharray": "6 4" }));
     if (summary.steps.length > 1) svg.append(svgEl("polyline", { points: summary.steps.map((s) => `${x(s.step)},${y(s.reward)}`).join(" "),
       fill: "none", stroke: "var(--mint-ink)", "stroke-width": 2, "stroke-linejoin": "round" }));
-    summary.tests.forEach((t) => {
-      svg.append(svgEl("circle", { cx: x(t.step), cy: y(t.reward), r: 5, fill: "var(--pink-ink)", stroke: "var(--paper)", "stroke-width": 2 }));
-      const label = svgEl("text", { x: x(t.step), y: y(t.reward) - 10, "text-anchor": "middle" }); label.textContent = t.reward.toFixed(3); svg.append(label);
-    });
+    for (const split of ["validation", "test"]) {
+      const pts = evals.filter((e) => e.split === split);
+      if (pts.length > 1) svg.append(svgEl("polyline", { points: pts.map((e) => `${x(e.step)},${y(e.reward)}`).join(" "),
+        fill: "none", stroke: SPLIT_COLOR[split], "stroke-width": 1.5, "stroke-dasharray": "2 3" }));
+      pts.forEach((e) => {
+        svg.append(svgEl("circle", { cx: x(e.step), cy: y(e.reward), r: 5, fill: SPLIT_COLOR[split], stroke: "var(--paper)", "stroke-width": 2 }));
+        const label = svgEl("text", { x: x(e.step), y: y(e.reward) - 10, "text-anchor": "middle" }); label.textContent = e.reward.toFixed(3); svg.append(label);
+      });
+    }
     const hover = svgEl("line", { y1: T, y2: H - B, stroke: "var(--ink)", "stroke-dasharray": "3 3", visibility: "hidden" });
     svg.append(hover);
     const hit = svgEl("rect", { x: L, y: T, width: W - L - R, height: H - T - B, fill: "transparent", class: "hit" });
@@ -249,15 +297,25 @@
       return Math.max(0, Math.min(summary.current_step, Math.round(((p.x - L) / (W - L - R)) * maxStep)));
     };
     hit.addEventListener("mousemove", (evt) => {
-      const s = nearest(evt), row = summary.steps.find((r) => r.step === s), test = summary.tests.find((r) => r.step === s);
+      const s = nearest(evt), row = summary.steps.find((r) => r.step === s), marks = evals.filter((r) => r.step === s);
       hover.setAttribute("x1", x(s)); hover.setAttribute("x2", x(s)); hover.setAttribute("visibility", "visible");
-      tip(evt, `step ${s}` + (row ? ` · training ${row.reward.toFixed(3)}` : "") + (test ? ` · test ${test.reward.toFixed(3)}` : ""));
+      tip(evt, `step ${s}` + (row ? ` · training ${row.reward.toFixed(3)}` : "") + marks.map((m) => ` · ${m.split} ${m.reward.toFixed(3)}`).join(""));
     });
     hit.addEventListener("mouseleave", (evt) => { hover.setAttribute("visibility", "hidden"); tip(evt, null); });
-    hit.addEventListener("click", (evt) => { viewStep = nearest(evt); followLive = viewStep === summary.current_step; showStep(viewStep); });
+    hit.addEventListener("click", (evt) => { viewStep = nearest(evt); followLive = viewStep === summary.current_step; selected = null; showStep(viewStep); });
     svg.append(hit);
-    const last = summary.tests[summary.tests.length - 1];
-    $("chart-note").textContent = last ? `test score ${last.reward.toFixed(3)} at step ${last.step} · start ${summary.tests[0].reward.toFixed(3)}` : "";
+    const legend = $("chart-legend"); legend.replaceChildren();
+    if (summary.steps.length) legend.append(el("span", {}, "── training score, mean per step"));
+    ["validation", "test"].filter((sp) => evals.some((e) => e.split === sp)).forEach((sp) => {
+      const item = el("span"), dot = el("i", { class: "cell" });
+      dot.style.cssText = `background:${SPLIT_COLOR[sp]};border-radius:50%;width:9px;height:9px`;
+      item.append(dot, document.createTextNode(`benchmark score on ${SPLIT_SIZE[sp]} ${sp} X-rays`));
+      legend.append(item);
+    });
+    if (DENTISTS <= top) legend.append(el("span", {}, "- - dentists (0.84)"));
+    legend.append(el("span", {}, "· click a step to look back"));
+    const val = evals.filter((e) => e.split === "validation");
+    $("chart-note").textContent = val.length ? `validation ${val[0].reward.toFixed(3)} → ${val[val.length - 1].reward.toFixed(3)}` : "";
   }
 
   function renderRuns() {
@@ -265,20 +323,10 @@
     runs.forEach((r) => {
       const a = el("a", { class: "run" + (run && r.id === run.id ? " current" : ""), href: `#${r.id}` });
       a.append(el("span", {}, r.name), el("small", {}, r.live ? "Live now" : "Finished"),
-        el("small", {}, `${r.model} · step ${r.current_step} of ${r.max_steps}`),
+        el("small", {}, `${stageName(r)} · ${r.model} · step ${r.current_step} of ${r.max_steps}`),
         el("small", {}, new Date(r.updated * 1000).toLocaleString()));
       list.append(a);
     });
-  }
-
-  async function showStep(step) {
-    let films = [];
-    if (summary.rollout_steps.includes(step)) {
-      const live = step === summary.current_step && summary.live;
-      if (!stepCache.has(step) || live) stepCache.set(step, await fetchJson(`data/${run.id}/steps/${String(step).padStart(4, "0")}.json`));
-      films = stepCache.get(step);
-    }
-    renderGrid(step, films);
   }
 
   async function refresh() {
@@ -288,6 +336,7 @@
       run = runs.find((r) => r.id === wanted) || runs.find((r) => r.live) || runs[0];
       if (!run) return;
       summary = await fetchJson(`data/${run.id}/summary.json`);
+      summary.rollout_steps = summary.rollout_steps || [];
       if (followLive || viewStep === null) viewStep = summary.current_step;
       renderHeader(); renderChart(); renderRuns();
       await showStep(viewStep);
@@ -296,7 +345,7 @@
     }
   }
 
-  window.addEventListener("hashchange", () => { followLive = true; stepCache.clear(); selected = null; refresh(); });
+  window.addEventListener("hashchange", () => { followLive = true; cache.clear(); selected = null; viewStep = null; refresh(); });
   refresh();
   setInterval(refresh, POLL_MS);
 })();
