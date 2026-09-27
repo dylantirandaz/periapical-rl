@@ -9,6 +9,7 @@ import subprocess
 import time
 from collections import defaultdict
 from pathlib import Path
+from statistics import mean
 
 from datasets import Image, load_dataset
 from huggingface_hub import snapshot_download
@@ -59,8 +60,13 @@ def read_jsonl(path: Path) -> list[dict]:
 
 def summarize(args, run_dir: Path) -> tuple[dict, dict[int, list[dict]], list[dict]]:
     metrics = read_jsonl(run_dir / "metrics.jsonl")
-    steps = [{"step": m["step"], "reward": m.get("env/all/train_reward", m["env/all/reward"]), "benchmark": m["env/all/reward"],
-              "parsed": m.get("env/all/parsed", 0)} for m in metrics if "env/all/reward" in m]
+    rollouts = defaultdict(list)
+    for event in read_jsonl(run_dir / "live.jsonl"):
+        rollouts[event["step"]].append(event)
+    # From every rollout: the trainer's own env metrics skip groups whose rollouts all scored the same.
+    steps = [{"step": step, "reward": mean(e.get("train_reward", e["reward"]) for e in events),
+              "benchmark": mean(e["reward"] for e in events), "parsed": mean(e.get("parsed", 0) for e in events)}
+             for step, events in sorted(rollouts.items())]
     evals = []
     for split in EVAL_SPLITS:
         rows = [m for m in metrics if f"{split}/reward" in m]
@@ -68,9 +74,6 @@ def summarize(args, run_dir: Path) -> tuple[dict, dict[int, list[dict]], list[di
                    **{key.removeprefix(f"{split}/"): v for key, v in m.items() if key.startswith(f"{split}/")}}
                   for k, m in enumerate(rows)]
     loss = [{"step": m["step"], "nll": m["train_mean_nll"]} for m in metrics if "train_mean_nll" in m]
-    rollouts = defaultdict(list)
-    for event in read_jsonl(run_dir / "live.jsonl"):
-        rollouts[event["step"]].append(event)
     newest = max((p.stat().st_mtime for p in run_dir.rglob("*") if p.is_file()), default=0)
     summary = {"id": args.run_id, "name": args.name, "stage": args.stage, "model": args.model, "max_steps": args.max_steps,
                "live": time.time() - newest < LIVE_WINDOW_S, "updated": int(newest),
