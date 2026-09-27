@@ -1,0 +1,1 @@
+{"id":"s-tiles3x2-empty1.0","name":"Tiles 3x2 at 2x, real share of empty tiles (calibration test)","stage":"fine-tuning","model":"Inkling-Small","max_steps":51,"live":true,"updated":1790540472,"current_step":0,"steps":[],"evals":[],"loss":[],"rollout_steps":[],"eval_views":[]}
