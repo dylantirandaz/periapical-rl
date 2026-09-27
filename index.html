@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live Training Run · PanoRead</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+  :root {
+    --ink: #222725; --mute: #5e6562; --rule: #dce4df; --band: #f4f8f5; --paper: #ffffff;
+    --mint: #98e6c5; --mint-ink: #216954; --pink: #f3c5e5; --pink-ink: #ad358b;
+    --film: #0b0e0d; --box-dentist: #6fe0b4; --box-agent: #ff7ccf;
+    --s0: #eef3f0; --s1: #cfeede; --s2: #98e6c5; --s3: #4fb48d; --s4: #216954;
+    --serif: "Source Serif 4", Georgia, serif; --sans: Arial, Helvetica, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 14px; padding-inline: 24px; padding-block: 0 48px; }
+  .wrap { max-width: 1320px; margin: 0 auto; }
+  nav { display: flex; justify-content: space-between; align-items: center; padding-block: 18px; border-bottom: 1px solid var(--rule); }
+  nav .brand { font-family: var(--serif); font-size: 1.4rem; font-style: italic; font-weight: 600; text-decoration: none; color: var(--ink); }
+  nav .links { display: flex; gap: 22px; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; }
+  nav .links a { color: var(--mute); text-decoration: none; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 22px; padding-block: 22px 14px; }
+  h1 { font-family: var(--serif); font-weight: 400; font-size: 1.9rem; margin: 0; }
+  .status { display: inline-flex; align-items: center; gap: 6px; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute); }
+  .status i { width: 8px; height: 8px; border-radius: 50%; background: var(--mute); }
+  .status.live i { background: #d6334a; animation: pulse 1.6s infinite; }
+  .status.live { color: #d6334a; }
+  @keyframes pulse { 50% { opacity: 0.35; } }
+  .meta { color: var(--mute); font-size: 0.85rem; display: flex; flex-wrap: wrap; gap: 4px 18px; }
+  .meta b { color: var(--ink); font-weight: 600; }
+  .about { color: var(--mute); max-width: 72ch; margin: 0 0 18px; line-height: 1.5; }
+  .top { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .viewer { display: grid; gap: 8px; }
+  .film { position: relative; background: var(--film); border-radius: 4px; overflow: hidden; }
+  .film img { display: block; width: 100%; height: auto; }
+  .film svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .caption { color: var(--mute); font-size: 0.85rem; min-height: 1.3em; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.78rem; color: var(--mute); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend .sw { width: 16px; height: 10px; border: 2px solid; border-radius: 1px; }
+  .legend .cell { width: 12px; height: 12px; border-radius: 2px; }
+  .label { font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute); display: flex; justify-content: space-between; margin-bottom: 8px; }
+  .grid { display: grid; gap: 4px; }
+  .row { display: grid; grid-template-columns: 5.2rem repeat(8, minmax(0, 1fr)); gap: 4px; align-items: center; }
+  .row .name { font-size: 0.78rem; color: var(--mute); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row .name.dim { opacity: 0.5; }
+  .cellbtn { height: 22px; border: 0; border-radius: 3px; padding: 0; cursor: pointer; font-size: 0.66rem; color: transparent; }
+  .cellbtn:hover { outline: 2px solid var(--ink); }
+  .cellbtn.sel { outline: 2px solid var(--pink-ink); }
+  .cellbtn.unparsed { background: var(--paper) !important; box-shadow: inset 0 0 0 1.5px var(--pink-ink); }
+  .cellbtn.pending { background: repeating-linear-gradient(45deg, var(--band), var(--band) 4px, var(--paper) 4px, var(--paper) 8px); cursor: default; }
+  .cellbtn:focus-visible { outline: 2px solid var(--mint-ink); }
+  section { margin-top: 30px; padding-top: 18px; border-top: 1px solid var(--rule); }
+  .chart { width: 100%; height: auto; display: block; overflow: visible; }
+  .chart text { font-size: 11px; fill: var(--mute); font-family: var(--sans); }
+  .chart .hit { cursor: pointer; }
+  .tip { position: fixed; pointer-events: none; background: var(--ink); color: var(--paper); font-size: 12px; padding: 6px 8px; border-radius: 4px; white-space: nowrap; }
+  .runs { display: grid; gap: 8px; }
+  .run { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 10px 12px; border: 1px solid var(--rule); border-radius: 4px; text-decoration: none; color: var(--ink); }
+  .run:hover { background: var(--band); }
+  .run.current { border-color: var(--mint); background: #f8fcfa; }
+  .run small { color: var(--mute); }
+  .empty { color: var(--mute); padding: 24px 0; }
+  @media (max-width: 900px) { .top { grid-template-columns: 1fr; } }
+  @media (max-width: 520px) { body { padding-inline: 16px; } .row { grid-template-columns: 3.8rem repeat(8, minmax(0, 1fr)); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <a class="brand" href="./">PanoRead</a>
+    <div class="links"><a href="#chart">Score</a><a href="#runs">Runs</a></div>
+  </nav>
+
+  <header>
+    <h1>Live Training Run</h1>
+    <span class="status" id="status"><i></i><span id="status-text">Loading</span></span>
+    <div class="meta" id="meta"></div>
+  </header>
+  <p class="about">Inkling is learning, by reinforcement, to find infections at the tips of tooth roots on dental X-rays and rate how severe they are. Every step it tries 16 X-rays 8 times each. An answer scores 1.0 when every box it draws overlaps the dentists' box and every severity matches; half the score is the boxes, half the severities.</p>
+
+  <div class="top">
+    <div class="viewer">
+      <div class="film" id="film"><div class="empty">Waiting for the first scored answers…</div></div>
+      <div class="caption" id="caption"></div>
+      <div class="legend">
+        <span><i class="sw" style="border-color:var(--box-dentist)"></i>dentists</span>
+        <span><i class="sw" style="border-color:var(--box-agent)"></i>Inkling</span>
+      </div>
+    </div>
+    <div>
+      <div class="label"><span id="step-label">Step</span><span id="step-count"></span></div>
+      <div class="grid" id="grid"></div>
+      <div class="legend" style="margin-top:10px">
+        <span><i class="cell" style="background:var(--s0)"></i>0</span>
+        <span><i class="cell" style="background:var(--s2)"></i>0.5</span>
+        <span><i class="cell" style="background:var(--s4)"></i>1.0</span>
+        <span><i class="cell" style="box-shadow:inset 0 0 0 1.5px var(--pink-ink)"></i>unreadable answer</span>
+        <span><i class="cell" style="background:repeating-linear-gradient(45deg,var(--band),var(--band) 3px,var(--paper) 3px,var(--paper) 6px)"></i>still running</span>
+      </div>
+    </div>
+  </div>
+
+  <section id="chart">
+    <div class="label"><span>Score</span><span id="chart-note"></span></div>
+    <svg class="chart" id="chart-svg" viewBox="0 0 1000 240" role="img" aria-label="Average score per training step and on the held-out test X-rays"></svg>
+    <div class="legend" style="margin-top:8px">
+      <span><i class="sw" style="border-color:var(--mint-ink);height:0;border-width:1px 0 1px"></i>training answers, mean per step</span>
+      <span><i class="cell" style="background:var(--pink-ink);border-radius:50%;width:9px;height:9px"></i>387 held-out test X-rays</span>
+      <span>· click a step to look back</span>
+    </div>
+  </section>
+
+  <section id="runs">
+    <div class="label"><span>Runs</span></div>
+    <div class="runs" id="run-list"></div>
+  </section>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script>
+(() => {
+  const POLL_MS = 30000;
+  const GROUP_SIZE = 8;
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, attrs = {}, text) => {
+    const node = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+  const svgEl = (tag, attrs) => {
+    const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+    return node;
+  };
+  const shade = (r) => `var(--s${Math.min(4, Math.round(r * 4))})`;
+  const fetchJson = async (path) => {
+    const res = await fetch(`${path}?t=${Date.now()}`);
+    if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);
+    return res.json();
+  };
+
+  let runs = [], run = null, summary = null, viewStep = null, followLive = true, selected = null;
+  const stepCache = new Map();
+
+  function tip(evt, text) {
+    const t = $("tip");
+    if (!text) { t.hidden = true; return; }
+    t.textContent = text; t.hidden = false;
+    t.style.left = `${evt.clientX + 12}px`; t.style.top = `${evt.clientY + 12}px`;
+  }
+
+  function renderHeader() {
+    $("status").className = summary.live ? "status live" : "status";
+    $("status-text").textContent = summary.live ? "Live" : "Finished";
+    const meta = $("meta"); meta.replaceChildren();
+    const total = summary.steps.length * 16 * GROUP_SIZE;
+    [[summary.name, ""], [`Step ${summary.current_step} of ${summary.max_steps}`, ""], [summary.model, "model"],
+     [`${total.toLocaleString()} answers scored`, ""]].forEach(([text]) => meta.append(el("span", {}, text)));
+  }
+
+  function renderFilm(film, attempt, idx) {
+    const box = $("film"); box.replaceChildren();
+    const img = el("img", { src: `films/${film.film}.jpg`, alt: `Dental X-ray ${film.film}` });
+    const svg = svgEl("svg", { viewBox: "0 0 1 1", preserveAspectRatio: "none", "aria-hidden": "true" });
+    const draw = (boxes, color, width) => boxes.forEach(([x0, y0, x1, y1]) => svg.append(svgEl("rect", {
+      x: x0, y: y0, width: Math.max(0, x1 - x0), height: Math.max(0, y1 - y0), fill: "none", stroke: color,
+      "stroke-width": width, "vector-effect": "non-scaling-stroke" })));
+    draw(film.boxes, "var(--box-dentist)", 3);
+    if (attempt) draw(attempt.lesions.map((l) => l.box), "var(--box-agent)", 2.5);
+    box.append(img, svg);
+    const grades = film.pai.map((p) => `PAI ${p}`).join(", ");
+    $("caption").textContent = attempt
+      ? `X-ray ${film.film} · attempt ${idx + 1} · score ${attempt.reward.toFixed(2)} · dentists: ${grades}` +
+        (attempt.parsed ? ` · Inkling: ${attempt.lesions.map((l) => `PAI ${l.pai}`).join(", ") || "no lesions"}` : " · answer could not be read")
+      : `X-ray ${film.film} · dentists: ${grades}`;
+  }
+
+  function renderGrid(step, films) {
+    $("step-label").textContent = `Step ${step}` + (step === summary.current_step && summary.live ? " · running" : "");
+    const done = films.reduce((n, f) => n + f.rollouts.length, 0);
+    $("step-count").textContent = films.length ? `${done} of ${16 * GROUP_SIZE} answers scored` : "";
+    const grid = $("grid"); grid.replaceChildren();
+    if (!films.length) { grid.append(el("div", { class: "empty" }, "No per-answer detail for this step.")); return; }
+    films.forEach((film) => {
+      const row = el("div", { class: "row" });
+      row.append(el("span", { class: "name" }, film.film));
+      for (let i = 0; i < GROUP_SIZE; i++) {
+        const a = film.rollouts[i];
+        const b = el("button", { type: "button", class: "cellbtn" + (a ? (a.parsed ? "" : " unparsed") : " pending"),
+          "aria-label": a ? `X-ray ${film.film}, attempt ${i + 1}, score ${a.reward.toFixed(2)}` : "still running" });
+        if (a) {
+          b.style.background = shade(a.reward);
+          b.addEventListener("click", () => { selected = { film: film.film, idx: i }; renderFilm(film, a, i); markSelected(); });
+          b.addEventListener("mousemove", (e) => tip(e, `score ${a.reward.toFixed(2)} · boxes ${a.lesion_f1.toFixed(2)} · severity ${a.pai_accuracy.toFixed(2)}`));
+          b.addEventListener("mouseleave", (e) => tip(e, null));
+          b.dataset.key = `${film.film}:${i}`;
+        } else b.disabled = true;
+        row.append(b);
+      }
+      grid.append(row);
+    });
+    const keep = selected && films.find((f) => f.film === selected.film);
+    if (keep && keep.rollouts[selected.idx]) renderFilm(keep, keep.rollouts[selected.idx], selected.idx);
+    else {
+      const best = films.flatMap((f) => f.rollouts.map((a, i) => ({ f, a, i }))).sort((x, y) => y.a.reward - x.a.reward)[0];
+      if (best) { selected = { film: best.f.film, idx: best.i }; renderFilm(best.f, best.a, best.i); }
+    }
+    markSelected();
+  }
+
+  function markSelected() {
+    document.querySelectorAll(".cellbtn").forEach((b) => b.classList.toggle("sel", selected && b.dataset.key === `${selected.film}:${selected.idx}`));
+  }
+
+  function renderChart() {
+    const svg = $("chart-svg"); svg.replaceChildren();
+    const W = 1000, H = 240, L = 44, R = 16, T = 12, B = 30;
+    const maxStep = Math.max(summary.max_steps, 1);
+    const values = [...summary.steps.map((s) => s.reward), ...summary.tests.map((t) => t.reward)];
+    const top = Math.max(0.1, Math.ceil(Math.max(0, ...values) * 1.25 * 20) / 20);
+    const x = (s) => L + (s / maxStep) * (W - L - R), y = (v) => T + (1 - v / top) * (H - T - B);
+    for (let i = 0; i <= 4; i++) {
+      const v = (top * i) / 4;
+      svg.append(svgEl("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: "var(--rule)" }));
+      const t = svgEl("text", { x: L - 8, y: y(v) + 4, "text-anchor": "end" }); t.textContent = v.toFixed(2); svg.append(t);
+    }
+    for (let s = 0; s <= maxStep; s += Math.max(1, Math.round(maxStep / 10))) {
+      const t = svgEl("text", { x: x(s), y: H - 8, "text-anchor": "middle" }); t.textContent = s; svg.append(t);
+    }
+    if (summary.steps.length > 1) svg.append(svgEl("polyline", { points: summary.steps.map((s) => `${x(s.step)},${y(s.reward)}`).join(" "),
+      fill: "none", stroke: "var(--mint-ink)", "stroke-width": 2, "stroke-linejoin": "round" }));
+    summary.tests.forEach((t) => {
+      svg.append(svgEl("circle", { cx: x(t.step), cy: y(t.reward), r: 5, fill: "var(--pink-ink)", stroke: "var(--paper)", "stroke-width": 2 }));
+      const label = svgEl("text", { x: x(t.step), y: y(t.reward) - 10, "text-anchor": "middle" }); label.textContent = t.reward.toFixed(3); svg.append(label);
+    });
+    const hover = svgEl("line", { y1: T, y2: H - B, stroke: "var(--ink)", "stroke-dasharray": "3 3", visibility: "hidden" });
+    svg.append(hover);
+    const hit = svgEl("rect", { x: L, y: T, width: W - L - R, height: H - T - B, fill: "transparent", class: "hit" });
+    const nearest = (evt) => {
+      const pt = svg.createSVGPoint(); pt.x = evt.clientX; pt.y = evt.clientY;
+      const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+      return Math.max(0, Math.min(summary.current_step, Math.round(((p.x - L) / (W - L - R)) * maxStep)));
+    };
+    hit.addEventListener("mousemove", (evt) => {
+      const s = nearest(evt), row = summary.steps.find((r) => r.step === s), test = summary.tests.find((r) => r.step === s);
+      hover.setAttribute("x1", x(s)); hover.setAttribute("x2", x(s)); hover.setAttribute("visibility", "visible");
+      tip(evt, `step ${s}` + (row ? ` · training ${row.reward.toFixed(3)}` : "") + (test ? ` · test ${test.reward.toFixed(3)}` : ""));
+    });
+    hit.addEventListener("mouseleave", (evt) => { hover.setAttribute("visibility", "hidden"); tip(evt, null); });
+    hit.addEventListener("click", (evt) => { viewStep = nearest(evt); followLive = viewStep === summary.current_step; showStep(viewStep); });
+    svg.append(hit);
+    const last = summary.tests[summary.tests.length - 1];
+    $("chart-note").textContent = last ? `test score ${last.reward.toFixed(3)} at step ${last.step} · start ${summary.tests[0].reward.toFixed(3)}` : "";
+  }
+
+  function renderRuns() {
+    const list = $("run-list"); list.replaceChildren();
+    runs.forEach((r) => {
+      const a = el("a", { class: "run" + (run && r.id === run.id ? " current" : ""), href: `#${r.id}` });
+      a.append(el("span", {}, r.name), el("small", {}, r.live ? "Live now" : "Finished"),
+        el("small", {}, `${r.model} · step ${r.current_step} of ${r.max_steps}`),
+        el("small", {}, new Date(r.updated * 1000).toLocaleString()));
+      list.append(a);
+    });
+  }
+
+  async function showStep(step) {
+    let films = [];
+    if (summary.rollout_steps.includes(step)) {
+      const live = step === summary.current_step && summary.live;
+      if (!stepCache.has(step) || live) stepCache.set(step, await fetchJson(`data/${run.id}/steps/${String(step).padStart(4, "0")}.json`));
+      films = stepCache.get(step);
+    }
+    renderGrid(step, films);
+  }
+
+  async function refresh() {
+    try {
+      runs = await fetchJson("data/runs.json");
+      const wanted = location.hash.slice(1);
+      run = runs.find((r) => r.id === wanted) || runs.find((r) => r.live) || runs[0];
+      if (!run) return;
+      summary = await fetchJson(`data/${run.id}/summary.json`);
+      if (followLive || viewStep === null) viewStep = summary.current_step;
+      renderHeader(); renderChart(); renderRuns();
+      await showStep(viewStep);
+    } catch (err) {
+      $("status-text").textContent = "Could not load the run data; retrying";
+    }
+  }
+
+  window.addEventListener("hashchange", () => { followLive = true; stepCache.clear(); selected = null; refresh(); });
+  refresh();
+  setInterval(refresh, POLL_MS);
+})();
+</script>
+</body>
+</html>
