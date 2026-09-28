@@ -102,7 +102,7 @@ def sync_once(args, films: dict) -> dict:
     for step, events in rollouts.items():
         by_film = defaultdict(list)
         for event in events:
-            by_film[event["film"]].append({k: event[k] for k in ("reward", "lesions", "parsed", "lesion_f1", "pai_accuracy")}
+            by_film[event["film"]].append({k: event.get(k, 0) for k in ("reward", "lesions", "parsed", "lesion_f1", "pai_f1")}
                                           | {"train_reward": event.get("train_reward", event["reward"])})
         write_json(data / "steps" / f"{step:04d}.json",
                    [{**film_record(films, film), "rollouts": attempts} for film, attempts in by_film.items()])
