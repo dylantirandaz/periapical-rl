@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PanoRead</title>
+<meta name="description" content="PanoRead: models find and grade periapical lesions on panoramic dental X-rays. 387 test films, one reward.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+  :root {
+    --ink: #23272c; --mute: #5c6470; --rule: #dde3ea; --band: #f4f7fa;
+    --sky: #a3c7e8; --sky-ink: #2b5d8a; --sky-wash: #f8fbfd;
+    --apricot: #f2c9a7; --apricot-ink: #b05f2c; --apricot-wash: #fdfaf6;
+    --lilac: #c5b8d9; --butter: #e8dfa0;
+    --serif: "Source Serif 4", Georgia, serif; --sans: Arial, Helvetica, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  ::selection { background: var(--sky); color: var(--ink); }
+  html { font-family: var(--serif); font-size: 17px; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  body { margin: 0; color: var(--ink); background: #fff; line-height: 1.5; }
+  .results-page { isolation: isolate; }
+  .results-page::before, .results-page::after { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+  .results-page::before {
+    background:
+      radial-gradient(ellipse 55% 44% at 5% 18%, rgba(163, 199, 232, 0.17), rgba(178, 208, 236, 0.06) 48%, transparent 82%),
+      radial-gradient(ellipse 40% 48% at 24% 18%, rgba(196, 218, 240, 0.10), transparent 78%),
+      radial-gradient(ellipse 58% 64% at 100% 44%, rgba(197, 184, 220, 0.15), transparent 80%),
+      radial-gradient(ellipse 45% 36% at 88% 64%, rgba(214, 199, 235, 0.09), transparent 80%),
+      radial-gradient(ellipse 55% 48% at -5% 84%, rgba(242, 201, 167, 0.10), transparent 80%),
+      radial-gradient(ellipse 46% 40% at 14% 103%, rgba(246, 221, 191, 0.09), transparent 82%);
+  }
+  .results-page::after {
+    opacity: 0.018;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='paper'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23paper)'/%3E%3C/svg%3E");
+  }
+  .wrap { width: min(1100px, calc(100% - 3rem)); margin: 0 auto; }
+  .skip-link { position: absolute; top: -5rem; left: 1rem; z-index: 20; padding: 0.6rem 1rem; background: #fff; }
+  .skip-link:focus { top: 1rem; }
+  nav.top { position: sticky; top: 0; z-index: 10; background: #fff; }
+  nav.top .wrap { display: flex; justify-content: space-between; align-items: baseline; padding: 1.1rem 0; border-bottom: 1px solid var(--rule); }
+  nav.top .brand { font-size: 1.35rem; font-weight: 500; line-height: 1; letter-spacing: -0.04em; text-decoration: none; color: var(--ink); }
+  nav.top .links { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem 1.6rem; font-family: var(--sans); font-size: 0.78rem; }
+  nav.top .links a { padding: 0.3rem 0; color: var(--ink); text-decoration: none; }
+  nav.top .links a:hover { color: var(--sky-ink); text-decoration: underline; }
+  header.hero { padding: 3.5rem 0 5rem; text-align: center; }
+  .study-map { display: grid; grid-template-columns: repeat(81, minmax(0, 1fr)); justify-items: center; row-gap: 10px; width: 100%; margin: 0 auto 2rem; }
+  .study-map span { width: 5px; height: 5px; border: 1px solid var(--sky-ink); border-radius: 50%; }
+  .study-map .solved { background: var(--sky-ink); }
+  .study-map .unsolved { background: #fff; border-color: var(--apricot-ink); }
+  header.hero h1 { margin: 0; font-size: clamp(2.1rem, 5vw, 3.1rem); font-weight: 400; line-height: 1.15; letter-spacing: -0.03em; }
+  header.hero h1 span { display: block; }
+  header.hero .meta { margin: 1.8rem 0 0; font-size: 0.75rem; }
+  .action-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.75rem 1.75rem; margin-top: 1.8rem; font-family: var(--sans); font-size: 0.84rem; }
+  .action-links a { padding: 0.35rem 0; text-decoration: none; border-bottom: 2px solid var(--sky); }
+  .action-links a:nth-child(2) { border-color: var(--apricot); }
+  .action-links a:nth-child(3) { border-color: var(--lilac); }
+  .action-links a:hover { color: var(--sky-ink); border-color: currentColor; }
+  .action-links .link-arrow { width: 0.85em; height: 0.85em; margin-left: 0.3rem; vertical-align: -0.02em; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  .meta, .caption { font-family: var(--sans); color: var(--mute); font-size: 0.82rem; line-height: 1.55; }
+  .caption { margin: 1rem 0 0; }
+  main.wrap { padding-bottom: 2rem; }
+  .result-section { margin-bottom: 5rem; scroll-margin-top: 6rem; }
+  .section-heading { margin: 0 auto 2.5rem; text-align: center; }
+  .section-heading h2, .explore h2 { margin: 0 0 1rem; font-size: clamp(1.6rem, 2.8vw, 2rem); font-weight: 400; line-height: 1.25; letter-spacing: -0.025em; text-wrap: balance; }
+  .section-heading p { max-width: 34rem; margin: 0 auto; color: var(--mute); font-family: var(--sans); font-size: 0.9rem; text-wrap: balance; }
+  .metric-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 3rem 0; }
+  .curve-layout { max-width: 46rem; margin: 0 auto; display: grid; gap: 1.5rem; }
+  .breakdown-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.25rem; }
+  .two.even { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; }
+  .two > *, .criteria-grid > * { min-width: 0; }
+  .panel { min-width: 0; padding: 1.5rem; background: var(--sky-wash); border-radius: 0.35rem; }
+  .panel:nth-child(2) { background: var(--apricot-wash); }
+  .landing h3 { margin: 0 0 1rem; font-size: 1.2rem; font-weight: 400; line-height: 1.3; }
+  .panel th, .panel td { padding-left: 0.5rem; padding-right: 0.5rem; }
+  .panel table { font-size: 0.8rem; }
+  .criteria-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2rem; }
+  .criteria-grid article { padding-top: 1rem; border-top: 3px solid var(--sky); }
+  .criteria-grid article:nth-child(2) { border-color: var(--apricot); }
+  .criteria-grid article:nth-child(3) { border-color: var(--butter); }
+  .criteria-grid article:nth-child(4) { border-color: var(--lilac); }
+  .criteria-grid h3 { font-family: var(--sans); font-size: 0.9rem; font-weight: 500; }
+  .criteria-grid p { margin: 0; font-family: var(--sans); color: var(--mute); font-size: 0.85rem; line-height: 1.6; }
+  .protocol-grid { margin-top: 3rem; }
+  .protocol-grid p { margin: 0 0 1rem; }
+  .explore { padding: 1rem 0 5rem; text-align: center; }
+  .figure-card { padding: 0 1rem; border-top: 0; text-align: center; }
+  .figure { margin: 0; font-size: clamp(1.9rem, 3.2vw, 2.5rem); font-weight: 400; line-height: 1; letter-spacing: -0.045em; font-variant-numeric: lining-nums tabular-nums; }
+  .figure span { font-size: 1rem; margin-left: 0.1rem; }
+  .figure-card .caption { margin: 0.7rem 0 0; font-size: 0.75rem; }
+  .figure-card .caption span { overflow-wrap: anywhere; }
+  .figure-card:first-child .figure { color: var(--sky-ink); }
+  .figure-card:nth-child(2) .figure { color: var(--apricot-ink); }
+  .scroll { min-width: 0; max-width: 100%; overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+  th, td { padding: 0.75rem 0.6rem; text-align: left; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+  thead th { border-bottom: 1px solid #999; font-weight: 400; font-size: 0.75rem; color: var(--mute); }
+  tbody tr:last-child td { border-bottom: 1px solid #999; }
+  table.board tbody tr:hover { background: var(--band); }
+  th:first-child, td:first-child { padding-left: 0; }
+  th:last-child, td:last-child { padding-right: 0; }
+  .readout .board, .curve-layout .board { background: rgba(255, 255, 255, 0.9); }
+  .readout .board th, .readout .board td { padding-left: 0.6rem; padding-right: 0.6rem; }
+  .readout .board thead th, .curve-layout .board thead th { background: rgba(163, 199, 232, 0.05); color: var(--sky-ink); border-bottom-color: var(--rule); }
+  .readout .board .primary { background: rgba(163, 199, 232, 0.06); color: var(--sky-ink); }
+  .num { text-align: right; }
+  .rank { width: 1.5rem; color: var(--mute); }
+  .model { font-weight: 500; }
+  .model-lab { display: none; }
+  .lab { color: var(--mute); }
+  .strong { font-weight: 700; }
+  .mute { color: var(--mute); }
+  dl { display: grid; grid-template-columns: 8rem 1fr; gap: 0.45rem 1rem; margin: 0; font-family: var(--sans); font-size: 0.86rem; }
+  dt { color: var(--mute); }
+  dd { margin: 0; }
+  a { color: var(--ink); text-decoration: underline; text-underline-offset: 0.18em; }
+  a:hover { color: var(--sky-ink); }
+  a:focus-visible, summary:focus-visible, button:focus-visible { outline: 2px solid var(--sky-ink); outline-offset: 4px; }
+  .chart-figure { min-width: 0; margin: 0; }
+  .chart { display: block; width: 100%; height: auto; margin: 0; font-family: var(--sans); }
+  .chart .grid { stroke: var(--rule); stroke-width: 1; }
+  .chart .frame { fill: none; stroke: #999; stroke-width: 1; }
+  .chart .tick { font-size: 12px; fill: var(--mute); }
+  .chart-key { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.7rem 1.25rem; margin: 1rem 0 0; padding: 0; list-style: none; font-family: var(--sans); font-size: 0.82rem; }
+  .chart-key li { display: flex; align-items: center; gap: 0.5rem; margin: 0; }
+  .key-line { display: block; flex: 0 0 2.5rem; width: 2.5rem; height: 0.5rem; }
+  footer.wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0 1rem; padding-top: 1rem; padding-bottom: 2rem; border-top: 1px solid var(--rule); font-family: var(--sans); font-size: 0.75rem; color: var(--mute); }
+  @media (max-width: 1100px) { .two.even { grid-template-columns: minmax(0, 1fr); } }
+  @media (max-width: 1000px) { .criteria-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 800px) { .study-map { grid-template-columns: repeat(27, minmax(0, 1fr)); row-gap: 6px; } }
+  @media (max-width: 600px) {
+    .wrap { width: calc(100% - 2rem); }
+    nav.top .wrap { width: calc(100% - 2rem); flex-wrap: wrap; padding: 1rem 0; gap: 0.85rem; }
+    nav.top .links { gap: 0.5rem 1rem; font-size: 0.72rem; }
+    .readout .board { font-size: 0.8rem; }
+    .readout .board th, .readout .board td { padding: 0.75rem 0.3rem; }
+    .readout .board th { font-size: 0.68rem; white-space: normal; }
+    .readout .board .rank { width: 1.2rem; }
+    .readout .board .model { white-space: normal; }
+    .readout .board .lab { display: none; }
+    .readout .model-lab { display: block; margin-top: 0.15rem; font-size: 0.7rem; font-weight: 400; color: var(--mute); }
+    header.hero { padding: 2.5rem 0 4.5rem; }
+    .study-map { margin-bottom: 1.5rem; }
+    .result-section { margin-bottom: 4.5rem; scroll-margin-top: 7.5rem; }
+    .section-heading { margin-bottom: 2rem; }
+    .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem 0.75rem; margin: 2.5rem 0; }
+    .figure-card { min-width: 0; padding: 0 0.4rem; }
+    .figure-card:last-child { grid-column: 1 / -1; }
+    .panel { padding: 1.2rem; }
+    .criteria-grid { gap: 1.75rem 1.25rem; }
+    .protocol-grid { margin-top: 2.5rem; }
+    .explore { padding-bottom: 3rem; }
+    .figure { font-size: 1.7rem; }
+    .figure span { font-size: 0.9rem; }
+    .figure-card .caption { font-size: 0.7rem; line-height: 1.4; }
+    .chart .tick { font-size: 20px; }
+    dl { grid-template-columns: 6rem minmax(0, 1fr); gap: 0.6rem 0.8rem; }
+  }
+</style>
+</head>
+<body class="results-page">
+<a class="skip-link" href="#leaderboard">Skip to results</a>
+
+<nav class="top">
+  <div class="wrap">
+    <a class="brand" href="./">PanoRead</a>
+    <span class="links"><a href="#leaderboard">Leaderboard</a><a href="./">Live run</a><a href="https://huggingface.co/datasets/tirandazdylan/periapical-lesions-pai">Data</a><a href="https://github.com/dylantirandaz/dental-environments">Benchmark</a></span>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="study-map" role="img"
+      aria-label="387 test films, 22 passed. Each dot is one film. Filled dots passed the best model's single call; outlined dots did not. Dots are grouped by outcome, not film order.">
+      <span class="solved"></span><span class="solved"></span><span class="solved"></span><span class="solved"></span><span class="solved"></span><span class="solved"></span><span class="solved"></span><span class="solved"></span><span class="solved"></span><span class="solved"></span><span class="solved"></span><span class="solved"></span><span class="solved"></span><span class="solved"></span><span class="solved"></span><span class="solved"></span><span class="solved"></span><span class="solved"></span><span class="solved"></span><span class="solved"></span><span class="solved"></span><span class="solved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span><span class="unsolved"></span>
+    </div>
+    <h1><span>Can models read</span> <span>dental X-rays?</span></h1>
+    <div class="action-links">
+      <a href="#leaderboard">Results <svg class="link-arrow" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M8 2v12m-4-4 4 4 4-4"/></svg></a>
+      <a href="https://github.com/dylantirandaz/dental-environments">Benchmark <svg class="link-arrow" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 13 13 3M4 3h9v9"/></svg></a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap landing">
+
+<section class="result-section" id="leaderboard" aria-labelledby="leaderboard-title">
+  <div class="section-heading">
+    <h2 id="leaderboard-title">Leaderboard</h2>
+    <p>Find, box and grade every lesion. One reward, 387 test films.</p>
+  </div>
+  <div class="metric-grid">
+    <div class="figure-card">
+      <p class="figure">0.19</p>
+      <p class="caption">best frontier score<br><span>GPT-6 Astra · one call</span></p>
+    </div>
+    <div class="figure-card">
+      <p class="figure">0.18</p>
+      <p class="caption">student after fine-tune + RL<br><span>Inkling-Small</span></p>
+    </div>
+    <div class="figure-card">
+      <p class="figure">0.83</p>
+      <p class="caption">dentists against dentists<br><span>59 films, twice</span></p>
+    </div>
+  </div>
+  <div class="readout">
+    <div class='scroll'><table class='board'><thead><tr><th class='rank'></th><th>Model</th><th class='lab'>Lab</th><th class='lab'>Harness</th><th class='num'>Films</th><th class='num primary'>Reward</th><th class='num'>Pass %</th></tr></thead><tbody>
+<tr><td class='rank'>1</td><td class='model'>GPT-6 Astra<span class='model-lab'>OpenAI</span></td><td class='lab'>OpenAI</td><td class='lab'>one call</td><td class='num'>387</td><td class='num primary strong'>0.19</td><td class='num'>5.7</td></tr>
+<tr><td class='rank'>2</td><td class='model'>Inkling-Small<span class='model-lab'>Thinking Machines</span></td><td class='lab'>Thinking Machines</td><td class='lab'>tiles, RL</td><td class='num'>387</td><td class='num primary strong'>0.18</td><td class='num'>3.1</td></tr>
+<tr><td class='rank'>3</td><td class='model'>Inkling-Small<span class='model-lab'>Thinking Machines</span></td><td class='lab'>Thinking Machines</td><td class='lab'>tiles</td><td class='num'>387</td><td class='num primary strong'>0.12</td><td class='num'>2.3</td></tr>
+<tr><td class='rank'>4</td><td class='model'>Gemini 3.8 Flash<span class='model-lab'>Google</span></td><td class='lab'>Google</td><td class='lab'>one call</td><td class='num'>20</td><td class='num primary strong'>0.08</td><td class='num'>0.0</td></tr>
+<tr><td class='rank'>5</td><td class='model'>Gemini 3.1 Pro<span class='model-lab'>Google</span></td><td class='lab'>Google</td><td class='lab'>one call</td><td class='num'>100</td><td class='num primary strong'>0.07</td><td class='num'>0.0</td></tr>
+<tr><td class='rank'>6</td><td class='model'>GPT-5.6 Sol<span class='model-lab'>OpenAI</span></td><td class='lab'>OpenAI</td><td class='lab'>one call</td><td class='num'>20</td><td class='num primary strong'>0.06</td><td class='num'>0.0</td></tr>
+<tr><td class='rank'>7</td><td class='model'>Claude Fable 5.1<span class='model-lab'>Anthropic</span></td><td class='lab'>Anthropic</td><td class='lab'>one call</td><td class='num'>20</td><td class='num primary strong'>0.05</td><td class='num'>0.0</td></tr>
+<tr><td class='rank'>8</td><td class='model'>Claude Opus 5<span class='model-lab'>Anthropic</span></td><td class='lab'>Anthropic</td><td class='lab'>one call</td><td class='num'>387</td><td class='num primary strong'>0.03</td><td class='num'>0.3</td></tr>
+<tr><td class='rank'>9</td><td class='model'>GPT-4.1 Mini<span class='model-lab'>OpenAI</span></td><td class='lab'>OpenAI</td><td class='lab'>bash</td><td class='num'>50</td><td class='num primary strong'>0.01</td><td class='num'>0.0</td></tr>
+<tr><td class='rank'>10</td><td class='model'>six more models<span class='model-lab'>0.00</span></td><td class='lab'>OpenAI · Anthropic · Alibaba</td><td class='lab'>one call · bash</td><td class='num'>20–50</td><td class='num primary strong'>0.00</td><td class='num'>0.0</td></tr>
+</tbody></table></div>
+    <p class="caption">Test split; trained rows greedy, scored once. A fixed two-box answer scores 0.04.</p>
+  </div>
+</section>
+
+<section class="result-section" aria-labelledby="training-title">
+  <div class="section-heading">
+    <h2 id="training-title">What training moves</h2>
+  </div>
+  <div class="curve-layout">
+    <figure class="chart-figure"><svg class="chart" viewBox="0 0 640 360" role="img" aria-label="validation score by RL step"><line x1="56" y1="320.0" x2="620" y2="320.0" class="grid"/><text x="48" y="324.0" class="tick" text-anchor="end">0.00</text><line x1="56" y1="271.0" x2="620" y2="271.0" class="grid"/><text x="48" y="275.0" class="tick" text-anchor="end">0.05</text><line x1="56" y1="222.0" x2="620" y2="222.0" class="grid"/><text x="48" y="226.0" class="tick" text-anchor="end">0.10</text><line x1="56" y1="173.0" x2="620" y2="173.0" class="grid"/><text x="48" y="177.0" class="tick" text-anchor="end">0.15</text><line x1="56" y1="124.0" x2="620" y2="124.0" class="grid"/><text x="48" y="128.0" class="tick" text-anchor="end">0.20</text><line x1="56" y1="75.0" x2="620" y2="75.0" class="grid"/><text x="48" y="79.0" class="tick" text-anchor="end">0.25</text><line x1="56" y1="26.0" x2="620" y2="26.0" class="grid"/><text x="48" y="30.0" class="tick" text-anchor="end">0.30</text><line x1="56.0" y1="26" x2="56.0" y2="320" class="grid"/><text x="56.0" y="338" class="tick" text-anchor="middle">0</text><line x1="150.0" y1="26" x2="150.0" y2="320" class="grid"/><text x="150.0" y="338" class="tick" text-anchor="middle">15</text><line x1="244.0" y1="26" x2="244.0" y2="320" class="grid"/><text x="244.0" y="338" class="tick" text-anchor="middle">30</text><line x1="338.0" y1="26" x2="338.0" y2="320" class="grid"/><text x="338.0" y="338" class="tick" text-anchor="middle">45</text><line x1="432.0" y1="26" x2="432.0" y2="320" class="grid"/><text x="432.0" y="338" class="tick" text-anchor="middle">60</text><line x1="526.0" y1="26" x2="526.0" y2="320" class="grid"/><text x="526.0" y="338" class="tick" text-anchor="middle">75</text><line x1="620.0" y1="26" x2="620.0" y2="320" class="grid"/><text x="620.0" y="338" class="tick" text-anchor="middle">90</text><text x="338.0" y="354" class="tick" text-anchor="middle">RL step</text><rect x="56" y="26" width="564" height="294" class="frame"/><path d="M56.0,189.6 118.7,193.9 181.3,159.5 244.0,175.5 306.7,104.2 369.3,92.6 432.0,112.5 494.7,111.3 557.3,104.0 620.0,96.3" fill="none" stroke="var(--sky-ink)" stroke-width="2"/><circle cx="56.0" cy="189.6" r="3" fill="var(--sky-ink)"/><circle cx="118.7" cy="193.9" r="3" fill="var(--sky-ink)"/><circle cx="181.3" cy="159.5" r="3" fill="var(--sky-ink)"/><circle cx="244.0" cy="175.5" r="3" fill="var(--sky-ink)"/><circle cx="306.7" cy="104.2" r="3" fill="var(--sky-ink)"/><circle cx="369.3" cy="92.6" r="3" fill="var(--sky-ink)"/><circle cx="432.0" cy="112.5" r="3" fill="var(--sky-ink)"/><circle cx="494.7" cy="111.3" r="3" fill="var(--sky-ink)"/><circle cx="557.3" cy="104.0" r="3" fill="var(--sky-ink)"/><circle cx="620.0" cy="96.3" r="3" fill="var(--sky-ink)"/></svg>
+      <ul class="chart-key" aria-label="Runs"><li><svg class="key-line" viewBox="0 0 40 8" aria-hidden="true"><line x1="0" y1="4" x2="40" y2="4" stroke="var(--sky-ink)" stroke-width="2"/></svg>Inkling-Small, fine-tuned + RL</li></ul>
+    </figure>
+    <div class='scroll'><table class='board tight'><thead><tr><th>Checkpoint</th><th class='num'>Reward</th><th class='num'>Pass %</th></tr></thead><tbody><tr><td class='model'>fine-tuned</td><td class='num'>0.12</td><td class='num'>2.3</td></tr><tr><td class='model'>+ RL, step 50</td><td class='num'>0.18</td><td class='num'>3.1</td></tr><tr><td class='model'>dentists, 59 films</td><td class='num'>0.83</td><td class='num'>61</td></tr></tbody></table></div>
+    <p class="caption">Validation, every 10 steps; test once at the end. RL raised lesions found 20% → 33%.</p>
+  </div>
+</section>
+
+<section class="result-section" aria-labelledby="breakdown-title">
+  <div class="section-heading"><h2 id="breakdown-title">Harness &amp; consistency</h2></div>
+  <div class="breakdown-layout">
+    <article class="panel">
+      <h3>GPT-6 Astra by harness</h3>
+      <div class='scroll'><table class='board tight'><thead><tr><th>Harness</th><th class='num'>Films</th><th class='num'>Reward</th><th class='num'>Pass %</th></tr></thead><tbody><tr><td class='model'>coding agent, 50 steps</td><td class='num'>25</td><td class='num'>0.26</td><td class='num'>4.0</td></tr><tr><td class='model'>one call, 3 tries</td><td class='num'>25</td><td class='num'>0.21</td><td class='num'>2.7</td></tr><tr><td class='model'>one call</td><td class='num'>387</td><td class='num'>0.19</td><td class='num'>5.7</td></tr></tbody></table></div>
+    </article>
+    <article class="panel">
+      <h3>Best student, step 90</h3>
+      <div class='scroll'><table class='board tight'><thead><tr><th>Measure</th><th class='num'>Value</th></tr></thead><tbody><tr><td class='model'>boxes per true lesion</td><td class='num'>2.1</td></tr><tr><td class='model'>grades that are PAI 3</td><td class='num'>93%</td></tr><tr><td class='model'>answers readable</td><td class='num'>97%</td></tr></tbody></table></div>
+      <p class="caption">Validation split, RL step 90.</p>
+    </article>
+  </div>
+</section>
+
+<section class="result-section" id="method" aria-labelledby="method-title">
+  <div class="section-heading">
+    <h2 id="method-title">What counts as a pass?</h2>
+  </div>
+  <div class="criteria-grid">
+    <article>
+      <h3>Find</h3>
+      <p>Every lesion. A miss and a false alarm both cost.</p>
+    </article>
+    <article>
+      <h3>Box</h3>
+      <p>One-to-one at IoU ≥ 0.3. Extra boxes count against; boxing everything scores ≈ 0.</p>
+    </article>
+    <article>
+      <h3>Grade</h3>
+      <p>PAI 3, 4 or 5, exact. ±1 tolerance would make PAI 4 always right.</p>
+    </article>
+    <article>
+      <h3>Score</h3>
+      <p>½ lesion F1 + ½ graded F1. Pass only at 1.</p>
+    </article>
+  </div>
+  <div class="two even protocol-grid">
+    <article>
+      <h3>Protocol</h3>
+      <dl>
+        <dt>Films</dt><dd>3,087 train · 389 validation · 387 test</dd>
+        <dt>Splits</dt><dd>per film; look-alikes stay together</dd>
+        <dt>Calls</dt><dd>one per film; agents: 50 steps, no network</dd>
+        <dt>Student</dt><dd>Tinker LoRA 32; 3×2 tiles at 2×</dd>
+        <dt>RL</dt><dd>500 held-out films, film reward</dd>
+        <dt>Sandbox</dt><dd>numpy + Pillow, network blocked</dd>
+      </dl>
+    </article>
+    <article>
+      <h3>The other environment</h3>
+      <p>panoramic-dicom-ingest: one exact lesion table from a DICOM archive. Three levels; reward is exactness.</p>
+      <p class="caption"><a href="https://github.com/dylantirandaz/dental-environments/blob/main/environments/panoramic-dicom-ingest/README.md">Read →</a></p>
+    </article>
+  </div>
+</section>
+
+<section class="explore" aria-labelledby="explore-title">
+  <h2 id="explore-title">Take a Closer Look</h2>
+  <div class="action-links">
+    <a href="https://github.com/dylantirandaz/dental-environments">Benchmark <svg class="link-arrow" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 13 13 3M4 3h9v9"/></svg></a>
+    <a href="./">Live run <svg class="link-arrow" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 13 13 3M4 3h9v9"/></svg></a>
+    <a href="https://huggingface.co/datasets/tirandazdylan/periapical-lesions-pai">Data <svg class="link-arrow" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 13 13 3M4 3h9v9"/></svg></a>
+  </div>
+</section>
+
+</main>
+
+<footer class="wrap">
+  <p>PanoRead · 2026-09-30</p>
+  <p>Films: Do et al. 2024, CC BY 4.0 · <a href="https://github.com/dylantirandaz/dental-environments">dental-environments</a> · <a href="https://github.com/dylantirandaz/periapical-rl">periapical-rl</a></p>
+</footer>
+
+</body>
+</html>
