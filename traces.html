@@ -131,6 +131,10 @@
   </div>
 </section>
 
+<section class="result-section" aria-label="Model thinking" id="thinking-section" hidden>
+  <div class="section-heading"><h2>Thinking</h2></div>
+  <pre class="reply thinking" id="thinking"></pre>
+</section>
 <section class="result-section" aria-label="Model reply">
   <div class="section-heading"><h2>Reply</h2></div>
   <pre class="reply" id="reply"></pre>
@@ -204,6 +208,9 @@
     const dentists = film.pai.join(", ");
     const student = film.parsed || film.lesions.length ? film.lesions.map((l) => l.pai).join(", ") || "no lesions" : "unreadable";
     $("caption").textContent = `film ${film.film} · reward ${film.reward.toFixed(2)} · dentists PAI ${dentists} · student PAI ${student}`;
+    const think = $("thinking"), thinkSection = $("thinking-section");
+    if (film.thinking) { thinkSection.hidden = false; think.textContent = film.thinking; }
+    else thinkSection.hidden = true;
     const pre = $("reply");
     if (film.reply !== undefined) { pre.className = "reply"; pre.textContent = prettyReply(film.reply); }
     else { pre.className = "reply none"; pre.textContent = "This checkpoint was published before replies were kept; it republishes with them when the training machine next syncs."; }
@@ -233,9 +240,10 @@
   const markSelected = () => document.querySelectorAll(".cellbtn").forEach((b) => b.classList.toggle("sel", selected === b.dataset.key));
 
   function renderMeta(s, view) {
-    const [split, step] = view.split("_");
+    const [split] = view.split("_");
     const mean = films.reduce((t, f) => t + f.reward, 0) / films.length;
-    $("run-meta").textContent = `${s.name} · ${s.model} · ${split} check at step ${Number(step)} · mean reward ${mean.toFixed(3)}`;
+    const where = s.stage === "benchmark" ? `${split}, one call` : `${split} check at step ${Number(view.split("_")[1])}`;
+    $("run-meta").textContent = `${s.name} · ${s.model} · ${where} · mean reward ${mean.toFixed(3)}`;
   }
 
   async function loadView(runId, view) {
@@ -248,17 +256,25 @@
   async function fillViews(runId, chosen) {
     const s = await summary(runId);
     const sel = $("view-select"); sel.replaceChildren();
-    (s.eval_views || []).forEach((v) => sel.append(el("option", { value: v }, v.replace("_", " · step "))));
+    (s.eval_views || []).forEach((v) => sel.append(el("option", { value: v },
+      s.stage === "benchmark" ? v.split("_")[0] : v.replace("_", " · step "))));
     sel.value = chosen || defaultView(s);
     sel.onchange = () => loadView(runId, sel.value);
     return sel.value;
   }
 
   async function main() {
+    const fetchOr = async (path, fallback) => {
+      try { return await fetchJson(path); } catch { return fallback; }
+    };
+    const benchmarks = await fetchOr("data/benchmarks.json", []);
     const runs = await fetchJson("data/runs.json");
     const runSel = $("run-select");
+    benchmarks.forEach((b) => runSel.append(el("option", { value: b.id }, b.name)));
     runs.forEach((r) => runSel.append(el("option", { value: r.id }, r.id)));
-    runSel.value = runs.some((r) => r.id === DEFAULT_RUN) ? DEFAULT_RUN : runs[0].id;
+    const preferred = benchmarks[0]?.id || DEFAULT_RUN;
+    runSel.value = [...benchmarks.map((b) => b.id), ...runs.map((r) => r.id)].includes(preferred)
+      ? preferred : (benchmarks[0] || runs[0]).id;
     const view = await fillViews(runSel.value);
     await loadView(runSel.value, view);
     runSel.onchange = async () => { await loadView(runSel.value, await fillViews(runSel.value)); };
