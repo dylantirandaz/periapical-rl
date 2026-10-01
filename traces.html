@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Traces · PanoRead</title>
+<meta name="description" content="PanoRead traces: every film the RL student answered, its boxes against the dentists', and the full reply.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+  :root {
+    --ink: #23272c; --mute: #5c6470; --rule: #dde3ea; --band: #f4f7fa;
+    --sky: #a3c7e8; --sky-ink: #2b5d8a; --sky-wash: #f8fbfd;
+    --apricot: #f2c9a7; --apricot-ink: #b05f2c; --apricot-wash: #fdfaf6;
+    --film: #0d1117;
+    --s0: #eef3f9; --s1: #d7e5f2; --s2: #a3c7e8; --s3: #5b8fbe; --s4: #2b5d8a;
+    --serif: "Source Serif 4", Georgia, serif; --sans: Arial, Helvetica, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  ::selection { background: var(--sky); color: var(--ink); }
+  html { font-family: var(--serif); font-size: 17px; -webkit-font-smoothing: antialiased; }
+  body { margin: 0; color: var(--ink); background: #fff; line-height: 1.5; }
+  .results-page { isolation: isolate; }
+  .results-page::before, .results-page::after { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+  .results-page::before {
+    background:
+      radial-gradient(ellipse 55% 44% at 5% 18%, rgba(163, 199, 232, 0.17), rgba(178, 208, 236, 0.06) 48%, transparent 82%),
+      radial-gradient(ellipse 40% 48% at 24% 18%, rgba(196, 218, 240, 0.10), transparent 78%),
+      radial-gradient(ellipse 58% 64% at 100% 44%, rgba(197, 184, 220, 0.15), transparent 80%),
+      radial-gradient(ellipse 45% 36% at 88% 64%, rgba(214, 199, 235, 0.09), transparent 80%),
+      radial-gradient(ellipse 55% 48% at -5% 84%, rgba(242, 201, 167, 0.10), transparent 80%),
+      radial-gradient(ellipse 46% 40% at 14% 103%, rgba(246, 221, 191, 0.09), transparent 82%);
+  }
+  .results-page::after {
+    opacity: 0.018;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='paper'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23paper)'/%3E%3C/svg%3E");
+  }
+  .wrap { width: min(1100px, calc(100% - 3rem)); margin: 0 auto; }
+  nav.top { position: sticky; top: 0; z-index: 10; background: #fff; }
+  nav.top .wrap { display: flex; justify-content: space-between; align-items: baseline; padding: 1.1rem 0; border-bottom: 1px solid var(--rule); }
+  nav.top .brand { font-size: 1.35rem; font-weight: 500; line-height: 1; letter-spacing: -0.04em; text-decoration: none; color: var(--ink); }
+  nav.top .links { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem 1.6rem; font-family: var(--sans); font-size: 0.78rem; }
+  nav.top .links a { padding: 0.3rem 0; color: var(--ink); text-decoration: none; }
+  nav.top .links a:hover { color: var(--sky-ink); text-decoration: underline; }
+  header.hero { padding: 3rem 0 2.5rem; text-align: center; }
+  header.hero h1 { margin: 0; font-size: clamp(2rem, 4.5vw, 2.8rem); font-weight: 400; line-height: 1.15; letter-spacing: -0.03em; }
+  .meta, .caption { font-family: var(--sans); color: var(--mute); font-size: 0.82rem; line-height: 1.55; }
+  header.hero .meta { margin: 1.2rem 0 0; }
+  .controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.75rem 1.75rem; margin-top: 1.4rem; font-family: var(--sans); font-size: 0.84rem; }
+  .controls label { display: flex; align-items: baseline; gap: 0.5rem; }
+  .controls select { font: inherit; color: var(--ink); background: #fff; border: 1px solid var(--rule); border-radius: 0.25rem; padding: 0.25rem 0.4rem; }
+  a { color: var(--ink); text-decoration: underline; text-underline-offset: 0.18em; }
+  a:hover { color: var(--sky-ink); }
+  main.wrap { padding-bottom: 2rem; }
+  .result-section { margin-bottom: 4rem; scroll-margin-top: 6rem; }
+  .section-heading { margin: 0 auto 2rem; text-align: center; }
+  .section-heading h2 { margin: 0; font-size: clamp(1.4rem, 2.4vw, 1.8rem); font-weight: 400; letter-spacing: -0.02em; }
+  .top { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 1.75rem; align-items: start; }
+  .viewer { display: grid; gap: 0.5rem; }
+  .film { position: relative; background: var(--film); border-radius: 4px; overflow: hidden; }
+  .film img { display: block; width: 100%; height: auto; }
+  .film svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .film .empty { color: #97a3b2; padding: 3rem 1.5rem; }
+  .legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem; font-family: var(--sans); font-size: 0.78rem; color: var(--mute); }
+  .legend span { display: inline-flex; align-items: center; gap: 0.4rem; }
+  .legend .sw { width: 16px; height: 10px; border: 2px solid; border-radius: 1px; }
+  .legend .cell { width: 12px; height: 12px; border-radius: 2px; }
+  .label { font-family: var(--sans); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mute); display: flex; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.5rem; }
+  .grid { display: flex; flex-wrap: wrap; gap: 3px; }
+  .cellbtn { width: 15px; height: 15px; border: 0; border-radius: 3px; padding: 0; cursor: pointer; }
+  .cellbtn:hover { outline: 2px solid var(--ink); }
+  .cellbtn.sel { outline: 2px solid var(--apricot-ink); }
+  .cellbtn:focus-visible { outline: 2px solid var(--sky-ink); }
+  .cellbtn.noreply { box-shadow: inset 0 0 0 1.5px var(--apricot-ink); }
+  .reply { margin: 0; padding: 1.1rem 1.25rem; background: var(--sky-wash); border-radius: 0.35rem; font-family: var(--mono); font-size: 0.78rem; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 34rem; overflow: auto; }
+  .reply.none { font-family: var(--sans); color: var(--mute); background: var(--band); }
+  .tip { position: fixed; pointer-events: none; background: var(--ink); color: #fff; font-family: var(--sans); font-size: 12px; padding: 6px 8px; border-radius: 4px; white-space: nowrap; z-index: 30; }
+  footer.wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0 1rem; padding-top: 1rem; padding-bottom: 2rem; border-top: 1px solid var(--rule); font-family: var(--sans); font-size: 0.75rem; color: var(--mute); }
+  @media (max-width: 900px) { .top { grid-template-columns: 1fr; } }
+  @media (max-width: 600px) {
+    .wrap { width: calc(100% - 2rem); }
+    nav.top .wrap { width: calc(100% - 2rem); flex-wrap: wrap; padding: 1rem 0; gap: 0.85rem; }
+    header.hero { padding: 2rem 0 1.5rem; }
+  }
+</style>
+</head>
+<body class="results-page">
+<nav class="top">
+  <div class="wrap">
+    <a class="brand" href="./">PanoRead</a>
+    <span class="links"><a href="benchmark.html">Leaderboard</a><a href="./">Live run</a><a href="https://huggingface.co/datasets/tirandazdylan/periapical-lesions-pai">Data</a><a href="https://github.com/dylantirandaz/dental-environments">Benchmark</a></span>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <h1>Traces</h1>
+    <p class="meta" id="run-meta">Loading…</p>
+    <div class="controls">
+      <label>Run <select id="run-select"></select></label>
+      <label>Checkpoint <select id="view-select"></select></label>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+<section class="result-section" aria-label="Film viewer">
+  <div class="top">
+    <div class="viewer">
+      <div class="film" id="film"><div class="empty">Loading…</div></div>
+      <div class="caption" id="caption"></div>
+      <div class="legend">
+        <span><i class="sw" style="border-color:var(--sky-ink)"></i>dentists</span>
+        <span><i class="sw" style="border-color:var(--apricot-ink)"></i>student</span>
+      </div>
+    </div>
+    <div>
+      <div class="label"><span>Films</span><span id="grid-note"></span></div>
+      <div class="grid" id="grid"></div>
+      <div class="legend" style="margin-top:0.6rem">
+        <span>score</span>
+        <span><i class="cell" style="background:var(--s0)"></i>0</span>
+        <span><i class="cell" style="background:var(--s2)"></i>0.5</span>
+        <span><i class="cell" style="background:var(--s4)"></i>1</span>
+        <span><i class="cell" style="box-shadow:inset 0 0 0 1.5px var(--apricot-ink)"></i>reply missing</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="result-section" aria-label="Model reply">
+  <div class="section-heading"><h2>Reply</h2></div>
+  <pre class="reply" id="reply"></pre>
+</section>
+
+</main>
+
+<footer class="wrap">
+  <p>PanoRead · 2026-09-30</p>
+  <p><a href="benchmark.html">Leaderboard</a> · <a href="https://github.com/dylantirandaz/periapical-rl">Source</a></p>
+</footer>
+
+<div class="tip" id="tip" hidden></div>
+
+<script>
+(() => {
+  const DEFAULT_RUN = "s-rl-films";
+  const REPORTED_STEP = 50;
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, attrs = {}, text) => {
+    const node = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+  const svgEl = (tag, attrs) => {
+    const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+    return node;
+  };
+  const shade = (r) => `var(--s${Math.max(0, Math.min(4, Math.round(r * 4)))})`;
+  const fetchJson = async (path) => {
+    const res = await fetch(`${path}?t=${Date.now()}`);
+    if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);
+    return res.json();
+  };
+  const prettyReply = (text) => {
+    try { return JSON.stringify(JSON.parse(text), null, 2); } catch { return text; }
+  };
+
+  const summaries = new Map();
+  let films = [], selected = null;
+
+  function tip(evt, text) {
+    const t = $("tip");
+    if (!text) { t.hidden = true; return; }
+    t.textContent = text; t.hidden = false;
+    t.style.left = `${evt.clientX + 12}px`; t.style.top = `${evt.clientY + 12}px`;
+  }
+
+  async function summary(runId) {
+    if (!summaries.has(runId)) summaries.set(runId, await fetchJson(`data/${runId}/summary.json`));
+    return summaries.get(runId);
+  }
+
+  function defaultView(s) {
+    const views = s.eval_views || [];
+    const reported = views.find((v) => Number(v.split("_")[1]) === REPORTED_STEP);
+    return reported || views[views.length - 1] || null;
+  }
+
+  function renderFilm(film) {
+    const box = $("film"); box.replaceChildren();
+    const svg = svgEl("svg", { viewBox: "0 0 1 1", preserveAspectRatio: "none", "aria-hidden": "true" });
+    const draw = (boxes, color, width) => boxes.forEach(([x0, y0, x1, y1]) => svg.append(svgEl("rect", {
+      x: x0, y: y0, width: Math.max(0, x1 - x0), height: Math.max(0, y1 - y0), fill: "none", stroke: color,
+      "stroke-width": width, "vector-effect": "non-scaling-stroke" })));
+    draw(film.boxes, "var(--sky-ink)", 3);
+    draw(film.lesions.map((l) => l.box), "var(--apricot-ink)", 2.5);
+    box.append(el("img", { src: `films/${film.film}.jpg`, alt: `Dental X-ray ${film.film}` }), svg);
+    const dentists = film.pai.join(", ");
+    const student = film.parsed || film.lesions.length ? film.lesions.map((l) => l.pai).join(", ") || "no lesions" : "unreadable";
+    $("caption").textContent = `film ${film.film} · reward ${film.reward.toFixed(2)} · dentists PAI ${dentists} · student PAI ${student}`;
+    const pre = $("reply");
+    if (film.reply !== undefined) { pre.className = "reply"; pre.textContent = prettyReply(film.reply); }
+    else { pre.className = "reply none"; pre.textContent = "This checkpoint was published before replies were kept; it republishes with them when the training machine next syncs."; }
+  }
+
+  function renderGrid() {
+    const grid = $("grid"); grid.replaceChildren();
+    let best = null;
+    films.forEach((film) => {
+      const key = film.film;
+      const b = el("button", { type: "button", class: "cellbtn" + (film.reply === undefined ? " noreply" : ""),
+        "aria-label": `film ${film.film}, reward ${film.reward.toFixed(2)}` });
+      b.style.background = shade(film.reward);
+      b.dataset.key = key;
+      const show = () => { selected = key; renderFilm(film); markSelected(); };
+      b.addEventListener("click", show);
+      b.addEventListener("mousemove", (e) => tip(e, `film ${film.film} · reward ${film.reward.toFixed(2)}`));
+      b.addEventListener("mouseleave", (e) => tip(e, null));
+      grid.append(b);
+      if (!best || film.reward > best.film.reward) best = { film, show };
+    });
+    $("grid-note").textContent = `${films.length} films`;
+    const current = grid.querySelector(`[data-key="${selected}"]`);
+    if (current) current.click(); else if (best) best.show();
+  }
+
+  const markSelected = () => document.querySelectorAll(".cellbtn").forEach((b) => b.classList.toggle("sel", selected === b.dataset.key));
+
+  function renderMeta(s, view) {
+    const [split, step] = view.split("_");
+    const mean = films.reduce((t, f) => t + f.reward, 0) / films.length;
+    $("run-meta").textContent = `${s.name} · ${s.model} · ${split} check at step ${Number(step)} · mean reward ${mean.toFixed(3)}`;
+  }
+
+  async function loadView(runId, view) {
+    films = await fetchJson(`data/${runId}/evals/${view}.json`);
+    selected = null;
+    renderGrid();
+    renderMeta(await summary(runId), view);
+  }
+
+  async function fillViews(runId, chosen) {
+    const s = await summary(runId);
+    const sel = $("view-select"); sel.replaceChildren();
+    (s.eval_views || []).forEach((v) => sel.append(el("option", { value: v }, v.replace("_", " · step "))));
+    sel.value = chosen || defaultView(s);
+    sel.onchange = () => loadView(runId, sel.value);
+    return sel.value;
+  }
+
+  async function main() {
+    const runs = await fetchJson("data/runs.json");
+    const runSel = $("run-select");
+    runs.forEach((r) => runSel.append(el("option", { value: r.id }, r.id)));
+    runSel.value = runs.some((r) => r.id === DEFAULT_RUN) ? DEFAULT_RUN : runs[0].id;
+    const view = await fillViews(runSel.value);
+    await loadView(runSel.value, view);
+    runSel.onchange = async () => { await loadView(runSel.value, await fillViews(runSel.value)); };
+  }
+
+  main().catch((err) => {
+    $("run-meta").textContent = err.message;
+    $("film").replaceChildren(el("div", { class: "empty" }, err.message));
+  });
+})();
+</script>
+</body>
+</html>

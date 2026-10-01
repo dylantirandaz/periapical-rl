@@ -109,9 +109,11 @@ def sync_once(args, films: dict) -> dict:
     for ev in evals:
         target = data / "evals" / f"{ev['split']}_{ev['step']:04d}.json"
         rows = [row for row in read_jsonl(run_dir / ev["file"]) if row.get("sample", 0) == 0]
-        if rows and not target.exists():
+        published = json.loads(target.read_text()) if target.exists() else []
+        # Views written before the reply was kept are re-published once, with it.
+        if rows and (not published or any("reply" not in film for film in published)):
             write_json(target, [{**film_record(films, row["film"]), "lesions": parse_lesions(row["reply"]),
-                                 "reward": row["reward"], "parsed": row["parsed"]} for row in rows])
+                                 "reply": row["reply"], "reward": row["reward"], "parsed": row["parsed"]} for row in rows])
     summary["eval_views"] = sorted(p.stem for p in (data / "evals").glob("*.json")) if (data / "evals").exists() else []
     write_json(data / "summary.json", summary)
     runs_path = SITE / "data" / "runs.json"
