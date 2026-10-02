@@ -103,16 +103,16 @@
 
   <section class="block" id="leaderboard" aria-labelledby="leaderboard-title" style="margin-top: 28px;">
     <h2 class="section-title" id="leaderboard-title">Leaderboard</h2>
-    <p class="section-sub">Mean reward over the first 200 test films. Whiskers: 95% interval.</p>
+    <p class="section-sub" id="view-sub"></p>
     <div class="toolbar">
       <div class="seg" role="group" aria-label="Chart view">
-        <button type="button" data-view="reward" aria-pressed="true">Reward</button>
-        <button type="button" data-view="outcome" aria-pressed="false">Run outcome</button>
+        <button type="button" data-view="reward" aria-pressed="true">Mean reward</button>
+        <button type="button" data-view="pass" aria-pressed="false">Pass rate</button>
       </div>
     </div>
     <div class="bars" id="bars" aria-live="polite">
       <div class="bars-rows" id="bars-rows" role="list"></div>
-      <div class="axis" aria-hidden="true"><div></div><div class="ticks"><span style="left:0%">0</span><span style="left:25%">25%</span><span style="left:50%">50%</span><span style="left:75%">75%</span><span style="left:100%">100%</span></div><div></div></div>
+      <div class="axis" aria-hidden="true"><div></div><div class="ticks" id="axis-ticks"><span style="left:0%"></span><span style="left:25%"></span><span style="left:50%"></span><span style="left:75%"></span><span style="left:100%"></span></div><div></div></div>
     </div>
     <div class="bars-foot">
       <span class="mono-note" id="bars-count">Loading…</span>
@@ -151,7 +151,7 @@
     <dl class="kv" style="margin-top: 22px;">
       <dt>Task</dt><dd>Find each lesion, box it, grade it PAI 3, 4 or 5.</dd>
       <dt>Score</dt><dd>½ lesion F1 + ½ graded F1. Boxes match at IoU ≥ 0.3. Extra boxes cost.</dd>
-      <dt>Pass</dt><dd>Reward 1. Two dentists score each other 0.83.</dd>
+      <dt>Pass</dt><dd>A film with reward exactly 1. Two dentists scoring each other: reward 0.83, pass 61%.</dd>
       <dt>Agents</dt><dd>Codex 0.147.0 and Claude Code 2.1.280. Python and image tools, 50 turns, no network.</dd>
       <dt>Films</dt><dd>First 200 of 387 test films. One scored attempt each.</dd>
       <dt>Re-runs</dt><dd>Sandbox and network faults are re-run. The turn limit is not.</dd>
@@ -188,7 +188,20 @@
     thinkingmachines: { name: "Thinking Machines", color: "var(--thinking-machines)" },
   };
   const HARNESSES = { claude_code: "Claude Code", codex: "Codex" };
-  const DENTISTS_REWARD = 0.83;
+  // Two dentists scoring each other on 59 films read twice.
+  const DENTISTS = { reward: 0.83, pass: 0.61 };
+  const VIEWS = {
+    reward: {
+      sub: "Score per film from 0 to 1, averaged over 200 films. Partial credit counts. Whiskers: 95% interval.",
+      ticks: ["0", "0.25", "0.5", "0.75", "1"],
+      reference: (share) => `dentists ${share.toFixed(2)}`,
+    },
+    pass: {
+      sub: "Films with a perfect score of 1, out of 200. Amber is partial credit.",
+      ticks: ["0", "25%", "50%", "75%", "100%"],
+      reference: (share) => `dentists ${percent(share, 0)}`,
+    },
+  };
   // Why a run is unfinished. Shown only while the run is not complete.
   const UNFINISHED_NOTES = {
     "benchmark-gemini-3-8-flash-claude_code": "Stopped: inference budget ran out.",
@@ -312,13 +325,11 @@
       line.style.left = `${left}%`;
       overlay.append(line);
     }
-    if (view === "reward") {
-      const line = el("i", undefined, "ref");
-      line.style.left = `${DENTISTS_REWARD * 100}%`;
-      const label = el("span", `dentists ${percent(DENTISTS_REWARD, 0)}`, "ref-label");
-      label.style.left = `${DENTISTS_REWARD * 100}%`;
-      overlay.append(line, label);
-    }
+    const line = el("i", undefined, "ref");
+    line.style.left = `${DENTISTS[view] * 100}%`;
+    const label = el("span", VIEWS[view].reference(DENTISTS[view]), "ref-label");
+    label.style.left = `${DENTISTS[view] * 100}%`;
+    overlay.append(line, label);
     return overlay;
   }
 
@@ -329,7 +340,7 @@
     row.style.setProperty("--provider", who.color);
     const track = el("div", undefined, "bar-track");
     let value;
-    if (view === "outcome") {
+    if (view === "pass") {
       const total = entry.expected;
       const segments = el("div", undefined, "bar-segments");
       for (const [name, count] of [["pass", entry.outcomes.pass], ["partial", entry.outcomes.partial], ["zero", entry.outcomes.zero]]) {
@@ -351,7 +362,7 @@
         whisker.style.width = `${(range[1] - range[0]) * 100}%`;
         track.append(whisker);
       }
-      value = el("span", percent(entry.mean_reward), "bar-value");
+      value = el("span", entry.mean_reward.toFixed(3), "bar-value");
     }
     const label = el("a", undefined, "bar-label");
     label.href = `traces.html?run=${encodeURIComponent(entry.id)}`;
@@ -390,7 +401,7 @@
   function renderLegend(ranked, view) {
     const legend = $("legend");
     legend.replaceChildren();
-    const items = view === "outcome"
+    const items = view === "pass"
       ? [["Pass", "var(--pass-bar)"], ["Partial credit", "var(--mid-bar)"], ["Zero", "var(--fail-bar)"]]
       : [...new Map(ranked.map((entry) => [provider(entry).name, provider(entry).color])).entries()];
     for (const [name, color] of items) {
@@ -409,6 +420,8 @@
     else rows.append(el("p", "No run is complete yet.", "note"));
     $("bars").querySelector(".axis").hidden = !ranked.length;
     renderLegend(ranked, view);
+    $("view-sub").textContent = VIEWS[view].sub;
+    [...$("axis-ticks").children].forEach((tick, index) => { tick.textContent = VIEWS[view].ticks[index]; });
     for (const button of document.querySelectorAll(".seg button")) button.setAttribute("aria-pressed", String(button.dataset.view === view));
   }
 
