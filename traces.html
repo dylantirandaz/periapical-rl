@@ -3,14 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#121212">
 <title>Traces · PanoRead</title>
 <meta name="description" content="PanoRead agent traces: public messages, tool calls, returned thinking, crop images and model boxes against dentist boxes.">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@300;400;500;700&family=Spectral:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap">
 <link rel="stylesheet" href="site.css">
 <style>
-  :root { --s0: var(--gray-100); --s1: var(--gray-300); --s2: var(--gray-400); --s3: var(--gray-600); --s4: var(--gray-900); }
+  :root { --s0: var(--line-soft); --s1: var(--line-strong); --s2: var(--faint); --s3: var(--muted); --s4: var(--ink); }
   .tr-meta { margin: 8px 0 0; overflow-wrap: anywhere; }
-  .caption { font: 400 11px/17px var(--mono); color: var(--gray-600); overflow-wrap: anywhere; }
+  main > section.block { margin-top: 40px; padding-top: 28px; }
+  main > section.block:first-of-type { margin-top: 24px; padding-top: 0; border-top: 0; }
+  .caption { font: 400 11px/17px var(--mono); color: var(--muted); overflow-wrap: anywhere; }
   .tr-caption { overflow-wrap: anywhere; }
   .tr-controls { display: flex; flex-wrap: wrap; gap: 10px 24px; margin-top: 16px; }
   .tr-controls label { display: flex; align-items: center; gap: 8px; max-width: 100%; min-width: 0; }
@@ -20,29 +23,29 @@
   .film { position: relative; background: var(--film); border-radius: 4px; overflow: hidden; }
   .film img { display: block; width: 100%; height: auto; }
   .film svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .film .empty { color: var(--gray-400); padding: 48px 24px; font: 400 12px/18px var(--mono); }
+  .film .empty { color: var(--faint); padding: 48px 24px; font: 400 12px/18px var(--mono); }
   .legend label { display: inline-flex; align-items: center; gap: 6px; }
-  .legend .cell { width: 12px; height: 12px; border-radius: 2px; border: 1px solid var(--gray-200); background: transparent; }
+  .legend .cell { width: 12px; height: 12px; border-radius: 2px; border: 1px solid var(--line); background: transparent; }
   .tr-label { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
   .grid { display: flex; flex-wrap: wrap; gap: 3px; }
-  .cellbtn { width: 24px; height: 24px; border: 1px solid var(--gray-200); border-radius: 3px; padding: 0; cursor: pointer; }
-  .cellbtn:hover { outline: 2px solid var(--gray-900); }
+  .cellbtn { width: 24px; height: 24px; border: 1px solid var(--line); border-radius: 3px; padding: 0; cursor: pointer; }
+  .cellbtn:hover { outline: 2px solid var(--ink); }
   .cellbtn.sel { outline: 2px solid var(--anthropic); }
-  .cellbtn:focus-visible { outline: 2px solid var(--gray-900); }
+  .cellbtn:focus-visible { outline: 2px solid var(--ink); }
   .cellbtn.noreply { box-shadow: inset 0 0 0 1.5px var(--fail-ink); }
-  .reply { margin: 0; padding: 12px 14px; background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: 6px; font: 400 12px/18px var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 30rem; overflow: auto; }
-  .tr-details { margin: 0; min-width: 0; border-bottom: 1px solid var(--gray-100); padding: 8px 0; }
-  .tr-details > summary, #conversation summary { cursor: pointer; font: 400 12px/18px var(--mono); color: var(--gray-700); overflow-wrap: anywhere; }
-  .tr-details[open] > summary, #conversation details[open] > summary { margin-bottom: 8px; color: var(--gray-900); }
-  #conversation { margin-top: 12px; border-top: 1px solid var(--gray-100); }
-  #conversation details { margin: 0; min-width: 0; padding: 8px 0; border-bottom: 1px solid var(--gray-100); }
-  .tr-status { margin-top: 12px; font: 400 12px/18px var(--mono); color: var(--gray-700); overflow-wrap: anywhere; }
+  .reply { margin: 0; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; font: 400 12px/18px var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 30rem; overflow: auto; }
+  .tr-details { margin: 0; min-width: 0; border-bottom: 1px solid var(--line-soft); padding: 8px 0; }
+  .tr-details > summary, #conversation summary { cursor: pointer; font: 400 12px/18px var(--mono); color: var(--ink-soft); overflow-wrap: anywhere; }
+  .tr-details[open] > summary, #conversation details[open] > summary { margin-bottom: 8px; color: var(--ink); }
+  #conversation { margin-top: 12px; border-top: 1px solid var(--line-soft); }
+  #conversation details { margin: 0; min-width: 0; padding: 8px 0; border-bottom: 1px solid var(--line-soft); }
+  .tr-status { margin-top: 12px; font: 400 12px/18px var(--mono); color: var(--ink-soft); overflow-wrap: anywhere; }
   .tr-status p { margin: 0; }
   .errors { margin: 6px 0 0; padding: 8px 12px; border: 1px solid var(--fail-edge); border-radius: 6px; background: var(--fail-wash); color: var(--fail-ink); font: 400 12px/18px var(--mono); overflow-wrap: anywhere; }
   .trace-images { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 16px; }
   .trace-images figure { margin: 12px 0; min-width: 0; }
   .trace-images img { display: block; max-width: 100%; height: auto; background: var(--film); border-radius: 4px; }
-  .trace-images figcaption { margin-top: 4px; font: 400 10px/16px var(--mono); color: var(--gray-500); overflow-wrap: anywhere; }
+  .trace-images figcaption { margin-top: 4px; font: 400 10px/16px var(--mono); color: var(--muted-2); overflow-wrap: anywhere; }
   #calls table td:last-child { min-width: 8rem; overflow-wrap: anywhere; }
   #warnings { padding-left: 1.2rem; }
   @media (max-width: 900px) { .viewer-layout { grid-template-columns: 1fr; } }
@@ -63,7 +66,6 @@
   <label class="eyebrow">Model <select class="field" id="run-select" disabled></select></label>
   <label class="eyebrow">Case <select class="field" id="case-select" disabled></select></label>
 </div>
-<p class="note tr-caption">Agent benchmark only. <a href="./">Separate RL dashboard</a>.</p>
 <details class="tr-details"><summary>Run data and protocol</summary><pre class="reply" id="run-data"></pre></details>
 
 <section class="block" aria-label="Film viewer">
@@ -121,7 +123,6 @@
     <div class="scroll" id="calls"></div>
   </details>
   <h3 class="section-title" style="margin-top:28px">Public conversation</h3>
-  <p class="section-sub">Message order is preserved. Open each message for its full public fields and images. Private or encrypted reasoning is not public.</p>
   <div id="conversation"></div>
 </section>
 <noscript><p class="note">Enable JavaScript to view benchmark traces. <a href="data/benchmarks.json">Read the benchmark index</a>.</p></noscript>
@@ -137,8 +138,8 @@
     <ul class="footer-links"><li><a href="https://github.com/dylantirandaz/dental-environments">dental-environments</a> <span class="sep">·</span> <a href="https://github.com/dylantirandaz/periapical-rl">periapical-rl</a> <span class="sep">·</span> <a href="https://huggingface.co/datasets/tirandazdylan/periapical-lesions-pai">Dataset</a></li></ul>
   </div>
   <div class="footer-aside">
-    <h4>Data</h4><p>Films: Do et al. 2024, CC BY 4.0. Labels and splits come from the Hugging Face dataset.</p>
-    <h4>Colophon</h4><p>Iowan Old Style and JetBrains Mono. Layout after benchmarks.bio. Numbers come from <code>data/</code> in the public repo.</p>
+    <p>Films: Do et al. 2024, CC BY 4.0.</p>
+    <p>Set in Instrument Serif, Spectral and JetBrains Mono.</p>
   </div>
 </div></footer>
 
@@ -296,7 +297,7 @@
     const thinking = messages.map((message) => message.reasoning_content)
       .filter((value) => typeof value === "string" && value.length).join("\n\n");
     $("thinking-note").textContent = thinking
-      ? "Only API-returned reasoning is public. Returned thinking below is from this attempt."
+      ? "Reasoning shown is what the API returned."
       : "No reasoning_content text was returned for this attempt. Hidden reasoning is not available.";
     $("thinking-section").hidden = !thinking;
     $("thinking").textContent = thinking;

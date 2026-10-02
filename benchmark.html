@@ -3,74 +3,71 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#ffffff">
-<title>PanoRead — Agentic benchmark on real dental X-rays</title>
-<meta name="description" content="Coding agents find and grade periapical lesions on panoramic dental X-rays. First 200 test films, one attempt per film, up to 50 turns.">
+<meta name="theme-color" content="#121212">
+<title>PanoRead: can agents read dental X-rays?</title>
+<meta name="description" content="Coding agents find, box and grade periapical lesions on 200 real panoramic dental X-rays.">
+<meta property="og:title" content="Can agents read dental X-rays?">
+<meta property="og:description" content="Find every lesion. Box it. Grade it.">
+<meta property="og:image" content="assets/hero/14711.webp">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@300;400;500;700&family=Spectral:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap">
 <link rel="stylesheet" href="site.css">
 <style>
   /* Leaderboard bars. Columns: value, plot, label. The plot overlay lines up with the middle column. */
-  .toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; margin-top: 18px; }
+  .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; margin-top: 22px; }
   .bars { --value-col: 56px; --label-col: 180px; margin-top: 30px; }
   .bars-rows { position: relative; }
-  .plot { position: absolute; inset: 0 var(--label-col) 0 var(--value-col); pointer-events: none; border-right: 1px solid #eceef1; }
-  .plot i { position: absolute; top: 0; bottom: 0; border-left: 1px solid #eceef1; }
-  .plot .ref { border-left: 1px dashed var(--gray-400); }
-  .plot .ref-label { position: absolute; top: -17px; transform: translateX(-50%); font: 400 9px/12px var(--mono); letter-spacing: 0.04em; color: var(--gray-500); white-space: nowrap; }
-  .bar-row { position: relative; display: grid; grid-template-columns: var(--value-col) minmax(0, 1fr) var(--label-col); align-items: center; height: 24px; }
-  .bar-value { font: 400 12px/16px var(--mono); color: var(--provider, var(--gray-900)); font-variant-numeric: tabular-nums; }
-  .bar-track { position: relative; display: flex; align-items: center; height: 24px; }
-  .bar-fill { display: block; height: 10px; min-width: 2px; border-radius: 999px; background: var(--provider, var(--gray-400)); }
-  .bar-fill.muted { background: var(--gray-300); }
-  .bar-track.thin .bar-fill { height: 4px; }
-  .bar-segments { display: flex; width: 100%; height: 10px; overflow: hidden; border-radius: 999px; background: var(--gray-100); }
+  .plot { position: absolute; inset: 0 var(--label-col) 0 var(--value-col); pointer-events: none; border-right: 1px solid var(--line); }
+  .plot i { position: absolute; top: 0; bottom: 0; border-left: 1px solid var(--line); }
+  .plot .ref { border-left: 1px dashed var(--faint); }
+  .plot .ref-label { position: absolute; top: -17px; transform: translateX(-50%); font: 400 9px/12px var(--mono); letter-spacing: 0.04em; color: var(--muted-2); white-space: nowrap; }
+  .bar-row { position: relative; display: grid; grid-template-columns: var(--value-col) minmax(0, 1fr) var(--label-col); align-items: center; height: 26px; }
+  .bar-value { font: 400 12px/16px var(--mono); color: var(--provider, var(--ink)); font-variant-numeric: tabular-nums; }
+  .bar-track { position: relative; display: flex; align-items: center; height: 26px; }
+  .bar-fill { display: block; height: 10px; min-width: 2px; border-radius: 999px; background: var(--provider, var(--faint)); }
+  .bar-segments { display: flex; width: 100%; height: 10px; overflow: hidden; border-radius: 999px; background: var(--surface-2); }
   .bar-segments span { display: block; height: 100%; }
   .bar-segments .pass { background: var(--pass-bar); }
   .bar-segments .partial { background: var(--mid-bar); }
   .bar-segments .zero { background: var(--fail-bar); }
-  .whisker { position: absolute; top: 50%; height: 0; border-top: 1px solid var(--gray-600); }
-  .whisker::before, .whisker::after { content: ""; position: absolute; top: -3px; height: 6px; border-left: 1px solid var(--gray-600); }
+  .whisker { position: absolute; top: 50%; height: 0; border-top: 1px solid var(--muted); }
+  .whisker::before, .whisker::after { content: ""; position: absolute; top: -3px; height: 6px; border-left: 1px solid var(--muted); }
   .whisker::before { left: 0; }
   .whisker::after { right: 0; }
-  .bar-label { justify-self: end; max-width: 100%; padding-left: 14px; text-align: right; text-decoration: none; }
+  .bar-label { justify-self: end; max-width: 100%; padding-left: 14px; text-align: right; border: 0; }
   .bar-label:hover .bar-name { text-decoration: underline; text-underline-offset: 3px; }
-  .bar-name { display: block; font: 400 12px/13px var(--mono); color: var(--gray-900); overflow-wrap: anywhere; }
-  .bar-harness { display: block; font: 400 9px/9px var(--mono); color: var(--gray-500); }
-  .axis { display: grid; grid-template-columns: var(--value-col) minmax(0, 1fr) var(--label-col); margin-top: 10px; font: 400 10px/14px var(--mono); color: var(--gray-500); }
+  .bar-name { display: block; font: 400 12px/13px var(--mono); color: var(--ink-strong); overflow-wrap: anywhere; }
+  .bar-harness { display: block; font: 400 9px/9px var(--mono); color: var(--muted-2); }
+  .axis { display: grid; grid-template-columns: var(--value-col) minmax(0, 1fr) var(--label-col); margin-top: 10px; font: 400 10px/14px var(--mono); color: var(--muted-2); }
   .axis .ticks { position: relative; height: 14px; }
   .axis .ticks span { position: absolute; transform: translateX(-50%); }
   .bars-foot { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.5rem 1.5rem; margin-top: 22px; }
-  .unfinished { margin-top: 36px; padding-top: 20px; border-top: 1px solid var(--gray-100); }
+  .unfinished { margin-top: 40px; padding-top: 22px; border-top: 1px solid var(--line-soft); }
   .unfinished-list { display: grid; gap: 16px; margin-top: 16px; }
   .unfinished-item { display: grid; grid-template-columns: 56px minmax(0, 1fr); align-items: baseline; }
-  .unfinished-item .count { font: 400 12px/16px var(--mono); color: var(--gray-600); font-variant-numeric: tabular-nums; }
-  .unfinished-head a { font: 400 12px/16px var(--mono); color: var(--gray-900); text-decoration: none; }
+  .unfinished-item .count { font: 400 12px/16px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+  .unfinished-head a { font: 400 12px/16px var(--mono); color: var(--ink-soft); border: 0; }
   .unfinished-head a:hover { text-decoration: underline; text-underline-offset: 3px; }
   .unfinished-head .bar-harness { display: inline; margin-left: 8px; }
-  .unfinished-bar { width: min(100%, 520px); height: 4px; margin-top: 6px; border-radius: 999px; background: var(--gray-100); }
-  .unfinished-bar span { display: block; height: 100%; border-radius: inherit; background: var(--gray-300); }
-  .unfinished-note { max-width: 640px; margin: 6px 0 0; font: 400 10px/15px var(--mono); color: var(--gray-500); }
+  .unfinished-bar { width: min(100%, 520px); height: 4px; margin-top: 6px; border-radius: 999px; background: var(--line-soft); }
+  .unfinished-bar span { display: block; height: 100%; border-radius: inherit; background: var(--line-strong); }
+  .unfinished-note { margin: 6px 0 0; font: 400 10px/15px var(--mono); color: var(--muted-2); }
 
   /* Post-training chart */
-  .rl { display: grid; grid-template-columns: minmax(0, 640px) minmax(0, 1fr); gap: 24px 40px; align-items: start; margin-top: 22px; }
+  .rl { display: grid; grid-template-columns: minmax(0, 640px) minmax(0, 1fr); gap: 24px 40px; align-items: start; margin-top: 26px; }
   .chart { display: block; width: 100%; height: auto; font-family: var(--mono); }
-  .chart .grid { stroke: var(--gray-100); stroke-width: 1; }
-  .chart .frame { fill: none; stroke: var(--gray-200); stroke-width: 1; }
-  .chart .tick { font: 400 11px var(--mono); fill: var(--gray-500); }
+  .chart .grid { stroke: var(--line-soft); stroke-width: 1; }
+  .chart .frame { fill: none; stroke: var(--line); stroke-width: 1; }
+  .chart .tick { font: 400 11px var(--mono); fill: var(--muted-2); }
 
-  .method-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px 48px; margin-top: 20px; }
-  .method-grid h3 { margin: 0 0 10px; }
-  .footer-runs li { white-space: nowrap; }
-
-  @media (max-width: 860px) { .rl, .method-grid { grid-template-columns: minmax(0, 1fr); } }
+  @media (max-width: 860px) { .rl { grid-template-columns: minmax(0, 1fr); } }
   @media (max-width: 640px) {
     .bars { --value-col: 48px; --label-col: 108px; }
     .bar-label { padding-left: 8px; }
     .bar-name { font-size: 11px; }
     .chart .tick { font-size: 19px; }
-    .title { font-size: 26px; line-height: 32px; }
+    .section-title { font-size: 26px; }
   }
 </style>
 </head>
@@ -82,8 +79,19 @@
 </div></header>
 
 <main id="main" class="container">
-  <h1 class="title">Agentic benchmark on real dental X-rays</h1>
-  <p class="lede">Each task is one panoramic radiograph. The agent must find every periapical lesion, draw a box around it, and grade it 3, 4 or 5 on the Periapical Index. It works in a sandbox with no network. It can run Python, crop and enhance the film, and look at the result, for up to 50 turns. A deterministic grader matches its boxes one-to-one to the dentists' boxes (IoU ≥ 0.3) and scores lesion F1 and exact-grade F1. Extra boxes count against the answer, so boxing everything scores about zero.</p>
+  <section class="hero" aria-labelledby="hero-title">
+    <h1 id="hero-title">Can agents read dental X-rays?</h1>
+    <p class="hero-sub">Find every lesion. Box it. Grade it.</p>
+  </section>
+
+  <div class="stage-wrap" id="stage-wrap" hidden>
+    <div class="stage" id="stage" role="img" aria-label="Panoramic dental X-rays. Solid boxes are the dentists' lesions. Dashed boxes are the model's."></div>
+    <div class="stage-caption">
+      <div class="facts" id="stage-facts" aria-live="off"></div>
+      <div class="legend"><span><i class="box" style="--dot: var(--box-dentist)"></i>dentists</span><span><i class="box dashed" style="--dot: var(--box-model)"></i><span id="stage-model">model</span></span></div>
+    </div>
+    <div class="segments" id="segments" role="group" aria-label="Choose a film"></div>
+  </div>
 
   <nav class="tabs" aria-label="Sections">
     <ul>
@@ -91,12 +99,11 @@
       <li><a class="tab" href="#post-training">Post-training</a></li>
       <li><a class="tab" href="#method">Method</a></li>
     </ul>
-    <span class="pill">test split · first 200 films</span>
   </nav>
 
-  <section id="leaderboard" aria-labelledby="leaderboard-title" style="margin-top: 28px; padding-top: 22px; border-top: 1px solid var(--gray-100);">
-    <h2 class="section-title" id="leaderboard-title">Agent leaderboard</h2>
-    <p class="section-sub">Mean reward over the first 200 test films, one attempt per film. Reward is ½ lesion F1 plus ½ graded F1. Whiskers show a 95% interval over films. The dashed line is two dentists scoring each other.</p>
+  <section class="block" id="leaderboard" aria-labelledby="leaderboard-title" style="margin-top: 28px;">
+    <h2 class="section-title" id="leaderboard-title">Leaderboard</h2>
+    <p class="section-sub">Mean reward over the first 200 test films. Whiskers: 95% interval.</p>
     <div class="toolbar">
       <div class="seg" role="group" aria-label="Chart view">
         <button type="button" data-view="reward" aria-pressed="true">Reward</button>
@@ -115,56 +122,41 @@
       <p class="eyebrow">Unfinished · not ranked</p>
       <div class="unfinished-list" id="unfinished-rows" role="list"></div>
     </div>
-    <p class="note" id="benchmark-status" role="status"></p>
-    <p class="note">Only complete runs are ranked. A film that reached the 50-turn limit without an answer scores 0. A failed or missing film is not scored as zero, so a run with any of them stays unranked.</p>
-    <p class="note" id="route-note" hidden></p>
+    <p class="mono-note" id="benchmark-status" role="status" style="margin-top: 18px;"></p>
+    <p class="mono-note" id="route-note" hidden style="margin-top: 6px;"></p>
     <noscript><p class="note">Enable JavaScript to load the leaderboard. <a href="data/benchmarks.json">Read the data</a>.</p></noscript>
   </section>
 
   <section class="block" id="post-training" aria-labelledby="training-title">
-    <h2 class="section-title" id="training-title">Post-training gains</h2>
-    <p class="section-sub">A separate study, not an agent comparison. Inkling-Small is fine-tuned, then trained with reinforcement learning on 500 held-out films. It answers each film in six tiled calls (3×2 tiles at 2× zoom), without tools.</p>
+    <h2 class="section-title" id="training-title">Post-training</h2>
+    <p class="section-sub">A separate study. Inkling-Small, six tiled calls, no tools.</p>
     <div class="rl">
       <figure style="margin:0; min-width:0;">
         <svg class="chart" viewBox="0 0 640 360" role="img" aria-label="validation score by RL step"><line x1="56" y1="320.0" x2="620" y2="320.0" class="grid"/><text x="48" y="324.0" class="tick" text-anchor="end">0.00</text><line x1="56" y1="271.0" x2="620" y2="271.0" class="grid"/><text x="48" y="275.0" class="tick" text-anchor="end">0.05</text><line x1="56" y1="222.0" x2="620" y2="222.0" class="grid"/><text x="48" y="226.0" class="tick" text-anchor="end">0.10</text><line x1="56" y1="173.0" x2="620" y2="173.0" class="grid"/><text x="48" y="177.0" class="tick" text-anchor="end">0.15</text><line x1="56" y1="124.0" x2="620" y2="124.0" class="grid"/><text x="48" y="128.0" class="tick" text-anchor="end">0.20</text><line x1="56" y1="75.0" x2="620" y2="75.0" class="grid"/><text x="48" y="79.0" class="tick" text-anchor="end">0.25</text><line x1="56" y1="26.0" x2="620" y2="26.0" class="grid"/><text x="48" y="30.0" class="tick" text-anchor="end">0.30</text><line x1="56.0" y1="26" x2="56.0" y2="320" class="grid"/><text x="56.0" y="338" class="tick" text-anchor="middle">0</text><line x1="150.0" y1="26" x2="150.0" y2="320" class="grid"/><text x="150.0" y="338" class="tick" text-anchor="middle">15</text><line x1="244.0" y1="26" x2="244.0" y2="320" class="grid"/><text x="244.0" y="338" class="tick" text-anchor="middle">30</text><line x1="338.0" y1="26" x2="338.0" y2="320" class="grid"/><text x="338.0" y="338" class="tick" text-anchor="middle">45</text><line x1="432.0" y1="26" x2="432.0" y2="320" class="grid"/><text x="432.0" y="338" class="tick" text-anchor="middle">60</text><line x1="526.0" y1="26" x2="526.0" y2="320" class="grid"/><text x="526.0" y="338" class="tick" text-anchor="middle">75</text><line x1="620.0" y1="26" x2="620.0" y2="320" class="grid"/><text x="620.0" y="338" class="tick" text-anchor="middle">90</text><text x="338.0" y="354" class="tick" text-anchor="middle">RL step</text><rect x="56" y="26" width="564" height="294" class="frame"/><path d="M56.0,189.6 118.7,193.9 181.3,159.5 244.0,175.5 306.7,104.2 369.3,92.6 432.0,112.5 494.7,111.3 557.3,104.0 620.0,96.3" fill="none" stroke="var(--thinking-machines)" stroke-width="2"/><circle cx="56.0" cy="189.6" r="3" fill="var(--thinking-machines)"/><circle cx="118.7" cy="193.9" r="3" fill="var(--thinking-machines)"/><circle cx="181.3" cy="159.5" r="3" fill="var(--thinking-machines)"/><circle cx="244.0" cy="175.5" r="3" fill="var(--thinking-machines)"/><circle cx="306.7" cy="104.2" r="3" fill="var(--thinking-machines)"/><circle cx="369.3" cy="92.6" r="3" fill="var(--thinking-machines)"/><circle cx="432.0" cy="112.5" r="3" fill="var(--thinking-machines)"/><circle cx="494.7" cy="111.3" r="3" fill="var(--thinking-machines)"/><circle cx="557.3" cy="104.0" r="3" fill="var(--thinking-machines)"/><circle cx="620.0" cy="96.3" r="3" fill="var(--thinking-machines)"/></svg>
-        <p class="mono-note" style="margin-top:8px;">Validation reward by RL step: 128 films, every 10 steps.</p>
+        <p class="mono-note" style="margin-top:8px;">Validation reward by RL step · 128 films</p>
       </figure>
       <div style="min-width:0;">
-        <p class="eyebrow">Test split · 387 films · scored once, greedy</p>
+        <p class="eyebrow">Test split · 387 films</p>
         <div class="scroll" style="margin-top:8px;"><table class="data">
           <thead><tr><th>Checkpoint</th><th class="num">Reward</th><th class="num">Pass %</th></tr></thead>
           <tbody><tr><td>fine-tuned</td><td class="num">0.12</td><td class="num">2.3</td></tr><tr><td>+ RL, step 50</td><td class="num">0.18</td><td class="num">3.1</td></tr></tbody>
         </table></div>
-        <p class="note">RL added 0.06 reward (paired 95% interval 0.03 to 0.08) and raised the share of lesions found from 20% to 33%. <a href="./">Live RL dashboard</a>.</p>
+        <p class="mono-note" style="margin-top:12px;">+0.06 reward · 95% interval 0.03 to 0.08 · <a href="./">live run</a></p>
       </div>
     </div>
   </section>
 
   <section class="block" id="method" aria-labelledby="method-title">
-    <h2 class="section-title" id="method-title">How scoring works</h2>
-    <p class="section-sub">Reward is ½ lesion F1 plus ½ graded F1. A film passes only at reward 1.</p>
-    <div class="method-grid">
-      <div>
-        <h3 class="eyebrow">Scoring</h3>
-        <dl class="kv">
-          <dt>Find</dt><dd>Every lesion. A miss and a false alarm both cost.</dd>
-          <dt>Box</dt><dd>One-to-one at IoU ≥ 0.3. Extra boxes count against the answer.</dd>
-          <dt>Grade</dt><dd>PAI 3, 4 or 5, exact. A ±1 tolerance would make PAI 4 always right.</dd>
-          <dt>Ceiling</dt><dd>Two dentists scoring each other reach reward 0.83 and pass 61% (59 films read twice, not the test set).</dd>
-        </dl>
-      </div>
-      <div>
-        <h3 class="eyebrow">Protocol</h3>
-        <dl class="kv">
-          <dt>Films</dt><dd>First 200 test films, no shuffle, one scored result per film.</dd>
-          <dt>Splits</dt><dd>Per film. Look-alike films stay in the same split.</dd>
-          <dt>Agents</dt><dd>Codex 0.147.0 for GPT-6 Astra. Claude Code 2.1.280 for the others. Up to 50 turns.</dd>
-          <dt>Re-runs</dt><dd>A film that ends in a sandbox, tunnel or harness fault is run again. A film that reaches the turn limit keeps its score.</dd>
-          <dt>Traces</dt><dd>Public messages, tools, returned thinking and images. <a href="traces.html">Read them</a>.</dd>
-        </dl>
-      </div>
-    </div>
-    <p class="note">The other environment, <a href="https://github.com/dylantirandaz/dental-environments/blob/main/environments/panoramic-dicom-ingest/README.md">panoramic-dicom-ingest</a>, asks for one exact lesion table from a DICOM archive. It has three levels, and reward is exactness.</p>
+    <h2 class="section-title" id="method-title">Method</h2>
+    <dl class="kv" style="margin-top: 22px;">
+      <dt>Task</dt><dd>Find each lesion, box it, grade it PAI 3, 4 or 5.</dd>
+      <dt>Score</dt><dd>½ lesion F1 + ½ graded F1. Boxes match at IoU ≥ 0.3. Extra boxes cost.</dd>
+      <dt>Pass</dt><dd>Reward 1. Two dentists score each other 0.83.</dd>
+      <dt>Agents</dt><dd>Codex 0.147.0 and Claude Code 2.1.280. Python and image tools, 50 turns, no network.</dd>
+      <dt>Films</dt><dd>First 200 of 387 test films. One scored attempt each.</dd>
+      <dt>Re-runs</dt><dd>Sandbox and network faults are re-run. The turn limit is not.</dd>
+      <dt>Traces</dt><dd><a href="traces.html">Every message, tool call and image.</a></dd>
+    </dl>
   </section>
 </main>
 
@@ -179,8 +171,8 @@
     <ul class="footer-links"><li><a href="https://github.com/dylantirandaz/dental-environments">dental-environments</a> <span class="sep">·</span> <a href="https://github.com/dylantirandaz/periapical-rl">periapical-rl</a> <span class="sep">·</span> <a href="https://huggingface.co/datasets/tirandazdylan/periapical-lesions-pai">Dataset</a></li></ul>
   </div>
   <div class="footer-aside">
-    <h4>Data</h4><p>Films: Do et al. 2024, CC BY 4.0. Labels and splits come from the Hugging Face dataset.</p>
-    <h4>Colophon</h4><p>Iowan Old Style and JetBrains Mono. Layout after benchmarks.bio. Numbers come from <code>data/</code> in the public repo.</p>
+    <p>Films: Do et al. 2024, CC BY 4.0.</p>
+    <p>Set in Instrument Serif, Spectral and JetBrains Mono.</p>
   </div>
 </div></footer>
 
@@ -199,17 +191,23 @@
   const DENTISTS_REWARD = 0.83;
   // Why a run is unfinished. Shown only while the run is not complete.
   const UNFINISHED_NOTES = {
-    "benchmark-gemini-3-8-flash-claude_code": "Stopped when the inference budget ran out.",
-    "benchmark-deepseek-v4-1-flash-claude_code": "Not finished: each film uploads about 250 MB and the home network could not carry it.",
-    "benchmark-glm-5-3-flash-claude_code": "Not finished: each film uploads about 250 MB and the home network could not carry it.",
+    "benchmark-gemini-3-8-flash-claude_code": "Stopped: inference budget ran out.",
+    "benchmark-deepseek-v4-1-flash-claude_code": "Stopped: home network too slow.",
+    "benchmark-glm-5-3-flash-claude_code": "Stopped: home network too slow.",
   };
   const PLAIN_ROUTES = ["Prime Inference", "Tinker Anthropic-compatible API"];
+  const SVG_NS = "http://www.w3.org/2000/svg";
 
   const $ = (id) => document.getElementById(id);
   const el = (tag, text, className) => {
     const node = document.createElement(tag);
     if (text !== undefined) node.textContent = text;
     if (className) node.className = className;
+    return node;
+  };
+  const svg = (tag, attributes = {}) => {
+    const node = document.createElementNS(SVG_NS, tag);
+    for (const [name, value] of Object.entries(attributes)) node.setAttribute(name, String(value));
     return node;
   };
   const percent = (share, digits = 1) => `${(share * 100).toFixed(digits)}%`;
@@ -223,6 +221,90 @@
   const harness = (entry) => HARNESSES[entry.harness] ?? entry.harness;
   const interval = (value) => Array.isArray(value) && value.length === 2 && value.every(Number.isFinite) ? value : null;
 
+  // ---- Hero: annotated radiographs, one at a time, with story-style progress segments.
+  function heroBox(item, kind, box, pai, label, tag) {
+    const [width, height] = item.size;
+    const [x0, y0, x1, y1] = box;
+    const x = x0 * width, y = y0 * height, w = (x1 - x0) * width, h = (y1 - y0) * height;
+    const group = svg("g");
+    group.append(svg("rect", { class: `box ${kind}`, x, y, width: w, height: h }));
+    const gap = Math.round(item.size[0] / 100);
+    const below = kind === "model" || y < gap * 3;
+    group.append(Object.assign(svg("text", { class: `tag ${kind}`, x, y: below ? y + h + gap * 1.6 : y - gap }), { textContent: `${label} ${pai}` }));
+    return group;
+  }
+
+  function heroSlide(item) {
+    const [width, height] = item.size;
+    const slide = el("div", undefined, "slide");
+    const canvas = svg("svg", { viewBox: `0 0 ${width} ${height}`, preserveAspectRatio: "xMidYMid slice", "aria-hidden": "true" });
+    // Zoom slowly toward the first dentist box.
+    const [fx0, fy0, fx1, fy1] = item.dentists[0].box;
+    canvas.style.setProperty("--fx", `${((fx0 + fx1) / 2) * 100}%`);
+    canvas.style.setProperty("--fy", `${((fy0 + fy1) / 2) * 100}%`);
+    canvas.append(svg("image", { href: item.image, x: 0, y: 0, width, height }));
+    for (const { box, pai } of item.dentists) canvas.append(heroBox(item, "dentist", box, pai, "PAI"));
+    for (const { box, pai } of item.model.lesions) canvas.append(heroBox(item, "model", box, pai, "PAI"));
+    slide.append(canvas);
+    return slide;
+  }
+
+  function heroOutcome(reward) {
+    if (reward === 1) return ["pass", "pass"];
+    if (reward > 0) return ["mid", `partial ${reward.toFixed(2)}`];
+    return ["fail", "miss"];
+  }
+
+  async function loadHero() {
+    const response = await fetch("assets/hero.json", { cache: "no-store" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const items = await response.json();
+    if (!Array.isArray(items) || !items.length) throw new Error("No hero films");
+    const stage = $("stage"), segments = $("segments"), facts = $("stage-facts");
+    const slides = items.map(heroSlide);
+    // Label text is drawn in image units. Size it so it reads about 11 px on screen at any stage width.
+    const sizeTags = () => {
+      const screenPerUnit = stage.clientWidth / items[0].size[0];
+      for (const slide of slides) slide.firstElementChild.style.setProperty("--tag-size", `${Math.round(11 / screenPerUnit)}px`);
+    };
+    new ResizeObserver(sizeTags).observe(stage);
+    const buttons = items.map((item, index) => {
+      const button = el("button");
+      button.type = "button";
+      button.setAttribute("aria-label", `Film ${item.film}`);
+      button.addEventListener("click", () => show(index));
+      return button;
+    });
+    stage.append(...slides);
+    segments.append(...buttons);
+    $("stage-model").textContent = items[0].model.name;
+    let current = -1;
+    function show(index) {
+      if (index === current) { buttons[index].removeAttribute("aria-current"); void buttons[index].offsetWidth; }
+      current = index;
+      slides.forEach((slide, i) => slide.toggleAttribute("data-active", i === index));
+      buttons.forEach((button, i) => {
+        button.classList.toggle("done", i < index);
+        if (i === index) button.setAttribute("aria-current", "true");
+        else button.removeAttribute("aria-current");
+      });
+      const item = items[index];
+      const [tone, word] = heroOutcome(item.model.reward);
+      facts.replaceChildren(
+        el("span", `film ${item.film}`),
+        el("span", `dentists PAI ${item.dentists.map((d) => d.pai).join(", ")}`),
+        el("span", `${item.model.name} PAI ${item.model.lesions.map((l) => l.pai).join(", ") || "none"}`),
+        el("span", word, `status-pill ${tone}`),
+      );
+    }
+    // The fill animation on the active segment ends: go to the next film.
+    segments.addEventListener("animationend", (event) => { if (event.animationName === "fill") show((current + 1) % items.length); });
+    $("stage-wrap").hidden = false;
+    void stage.offsetWidth; // Compute the idle style first, so the first zoom runs.
+    show(0);
+  }
+
+  // ---- Leaderboard
   function plot(view) {
     const overlay = el("div", undefined, "plot");
     for (const left of [0, 25, 50, 75]) {
@@ -299,7 +381,7 @@
     fill.style.width = `${(entry.succeeded / entry.expected) * 100}%`;
     bar.append(fill);
     const notes = [UNFINISHED_NOTES[entry.id] ?? entry.reason];
-    if (entry.turn_limit_stops > 0) notes.push(`${entry.turn_limit_stops} of the scored films ended at the turn limit.`);
+    if (entry.turn_limit_stops > 0) notes.push(`${entry.turn_limit_stops} hit the turn limit.`);
     body.append(head, bar, el("p", notes.filter(Boolean).join(" "), "unfinished-note"));
     item.append(el("span", `${entry.succeeded}/${entry.expected}`, "count"), body);
     return item;
@@ -309,7 +391,7 @@
     const legend = $("legend");
     legend.replaceChildren();
     const items = view === "outcome"
-      ? [["Pass (reward 1)", "var(--pass-bar)"], ["Partial credit", "var(--mid-bar)"], ["Zero", "var(--fail-bar)"]]
+      ? [["Pass", "var(--pass-bar)"], ["Partial credit", "var(--mid-bar)"], ["Zero", "var(--fail-bar)"]]
       : [...new Map(ranked.map((entry) => [provider(entry).name, provider(entry).color])).entries()];
     for (const [name, color] of items) {
       const item = el("span");
@@ -337,8 +419,7 @@
     if (!Array.isArray(entries)) throw new Error("Invalid benchmark index");
     const ranked = entries.filter(complete).sort((a, b) => b.mean_reward - a.mean_reward);
     const unfinished = entries.filter((entry) => !complete(entry)).sort((a, b) => b.succeeded - a.succeeded);
-    const renderable = ranked.filter((entry) => entry.outcomes && typeof entry.outcomes === "object");
-    if (renderable.length !== ranked.length) throw new Error("A complete run has no outcome counts");
+    if (ranked.some((entry) => !entry.outcomes || typeof entry.outcomes !== "object")) throw new Error("A complete run has no outcome counts");
 
     let view = "reward";
     render(ranked, view);
@@ -353,11 +434,10 @@
     }
     const adapted = entries.filter((entry) => entry.route && !PLAIN_ROUTES.includes(entry.route));
     $("route-note").hidden = !adapted.length;
-    $("route-note").textContent = adapted.map((entry) => `${entry.name} uses ${entry.route}`).join("; ") + (adapted.length ? "." : "");
+    $("route-note").textContent = adapted.map((entry) => `${entry.name}: ${entry.route}`).join(" · ");
     $("benchmark-status").textContent = entries.length ? "" : "No benchmark entries published.";
 
-    const links = $("footer-runs");
-    links.replaceChildren(...[...ranked, ...unfinished].map((entry) => {
+    $("footer-runs").replaceChildren(...[...ranked, ...unfinished].map((entry) => {
       const item = el("li");
       const link = el("a", entry.name);
       link.href = `traces.html?run=${encodeURIComponent(entry.id)}`;
@@ -368,8 +448,9 @@
 
   load().catch((error) => {
     $("bars-count").textContent = "Leaderboard unavailable";
-    $("benchmark-status").textContent = `Cannot load benchmark data: ${error.message}. The post-training study below is separate.`;
+    $("benchmark-status").textContent = `Cannot load benchmark data: ${error.message}.`;
   });
+  loadHero().catch((error) => console.error(`Hero films unavailable: ${error.message}`));
 
   // Underline the tab of the section in view.
   const tabs = [...document.querySelectorAll(".tab")];

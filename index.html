@@ -3,58 +3,59 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#121212">
 <title>Live Training Run · PanoRead</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@300;400;500;700&family=Spectral:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap">
 <link rel="stylesheet" href="site.css">
 <style>
   :root {
     /* Aliases read by the chart script. */
-    --ink: var(--gray-900); --mint-ink: var(--gray-900); --pink-ink: var(--thinking-machines);
-    --rule: var(--gray-200); --paper: #fff;
+    --mint-ink: var(--ink); --pink-ink: var(--thinking-machines);
+    --rule: var(--line); --paper: var(--bg);
     /* Score ramp for grid cells. */
-    --s0: var(--gray-100); --s1: var(--gray-300); --s2: var(--gray-400); --s3: var(--gray-600); --s4: var(--gray-900);
+    --s0: var(--line-soft); --s1: var(--line-strong); --s2: var(--faint); --s3: var(--muted); --s4: var(--ink);
   }
   .statusline { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; margin-top: 10px; }
-  .status { display: inline-flex; align-items: center; gap: 6px; font: 400 11px/16px var(--mono); letter-spacing: 0.05em; text-transform: uppercase; color: var(--gray-600); }
-  .status i { width: 7px; height: 7px; border-radius: 50%; background: var(--gray-400); }
+  .status { display: inline-flex; align-items: center; gap: 6px; font: 400 11px/16px var(--mono); letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+  .status i { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
   .status.live { color: var(--fail-ink); }
   .status.live i { background: var(--fail-ink); animation: pulse 1.6s infinite; }
   @keyframes pulse { 50% { opacity: 0.35; } }
   @media (prefers-reduced-motion: reduce) { .status.live i { animation: none; } }
-  .meta { display: flex; flex-wrap: wrap; gap: 2px 18px; font: 400 11px/16px var(--mono); color: var(--gray-500); }
+  .meta { display: flex; flex-wrap: wrap; gap: 2px 18px; font: 400 11px/16px var(--mono); color: var(--muted-2); }
   .top { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 24px; align-items: start; margin-top: 28px; }
   .viewer { display: grid; gap: 8px; }
   .film { position: relative; background: var(--film); border-radius: 8px; overflow: hidden; }
   .film img { display: block; width: 100%; height: auto; }
   .film svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .caption { font: 400 11px/16px var(--mono); color: var(--gray-600); min-height: 1.3em; overflow-wrap: anywhere; }
+  .caption { font: 400 11px/16px var(--mono); color: var(--muted); min-height: 1.3em; overflow-wrap: anywhere; }
   .legend .sw { width: 16px; height: 10px; border: 2px solid; border-radius: 1px; background: transparent; }
   .legend .cell { width: 12px; height: 12px; border-radius: 2px; }
-  .label { margin: 0 0 8px; display: flex; justify-content: space-between; gap: 12px; font: 400 11px/16.5px var(--mono); letter-spacing: 0.05em; text-transform: uppercase; color: var(--gray-600); }
+  .label { margin: 0 0 8px; display: flex; justify-content: space-between; gap: 12px; font: 400 11px/16.5px var(--mono); letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
   .grid { display: grid; gap: 4px; }
   .row { display: grid; grid-template-columns: 5.2rem repeat(8, minmax(0, 1fr)); gap: 4px; align-items: center; }
-  .row .name { font: 400 10px/16px var(--mono); color: var(--gray-500); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row .name { font: 400 10px/16px var(--mono); color: var(--muted-2); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .evalgrid { display: flex; flex-wrap: wrap; gap: 3px; }
   .evalgrid .cellbtn { width: 15px; height: 15px; }
   .cellbtn { height: 22px; border: 0; border-radius: 3px; padding: 0; cursor: pointer; }
-  .cellbtn:hover { outline: 2px solid var(--gray-900); }
+  .cellbtn:hover { outline: 2px solid var(--ink); }
   .cellbtn.sel { outline: 2px solid var(--anthropic); }
-  .cellbtn.unparsed { background: #fff !important; box-shadow: inset 0 0 0 1.5px var(--fail-ink); }
-  .cellbtn.pending { background: repeating-linear-gradient(45deg, var(--gray-200), var(--gray-200) 4px, #fff 4px, #fff 8px); cursor: default; }
-  .cellbtn:focus-visible { outline: 2px solid var(--gray-900); }
+  .cellbtn.unparsed { background: var(--bg) !important; box-shadow: inset 0 0 0 1.5px var(--fail-ink); }
+  .cellbtn.pending { background: repeating-linear-gradient(45deg, var(--line), var(--line) 4px, var(--bg) 4px, var(--bg) 8px); cursor: default; }
+  .cellbtn:focus-visible { outline: 2px solid var(--ink); }
   .chart { width: 100%; height: auto; display: block; overflow: visible; margin-top: 8px; }
-  .chart text { font: 400 10px var(--mono); fill: var(--gray-500); }
+  .chart text { font: 400 10px var(--mono); fill: var(--muted-2); }
   .chart .hit { cursor: pointer; }
-  .tip { position: fixed; z-index: 40; pointer-events: none; background: var(--gray-900); color: #fff; font: 400 11px/16px var(--mono); padding: 6px 8px; border-radius: 4px; white-space: nowrap; }
+  .tip { position: fixed; z-index: 40; pointer-events: none; background: var(--ink-strong); color: var(--bg); font: 400 11px/16px var(--mono); padding: 6px 8px; border-radius: 4px; white-space: nowrap; }
   .runs { display: grid; gap: 10px; }
-  .run { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 12px 16px; border: 1px solid var(--gray-200); border-radius: 8px; text-decoration: none; color: var(--gray-900); font: 400 12px/18px var(--mono); }
-  .run:hover { border-color: var(--gray-400); }
-  .run.current { border-color: var(--gray-900); }
-  .run small { font: 400 10px/16px var(--mono); color: var(--gray-500); }
-  .empty { font: 400 12px/18px var(--mono); color: var(--gray-500); padding: 24px 0; }
-  .film .empty { color: var(--gray-300); padding: 28px 18px; }
+  .run { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 8px; text-decoration: none; color: var(--ink); font: 400 12px/18px var(--mono); }
+  .run:hover { border-color: var(--faint); }
+  .run.current { border-color: var(--ink); }
+  .run small { font: 400 10px/16px var(--mono); color: var(--muted-2); }
+  .empty { font: 400 12px/18px var(--mono); color: var(--muted-2); padding: 24px 0; }
+  .film .empty { color: var(--muted-2); padding: 28px 18px; }
   @media (max-width: 900px) { .top { grid-template-columns: 1fr; } }
   @media (max-width: 520px) { .row { grid-template-columns: 3.8rem repeat(8, minmax(0, 1fr)); } }
 </style>
@@ -72,7 +73,7 @@
     <span class="status" id="status"><i></i><span id="status-text">Loading</span></span>
     <div class="meta" id="meta"></div>
   </div>
-  <p class="lede">Inkling is learning to find infections at the tips of tooth roots on dental X-rays and rate how severe they are, in two stages. First it is fine-tuned on 2,587 X-rays the dentists labelled; then reinforcement learning practises on 500 X-rays it has not seen, 16 at a time, 8 tries each. The benchmark score is 1.0 only when every box overlaps the dentists' box and every severity matches (half boxes, half severities). Progress is measured on 389 validation X-rays; the 387 test X-rays are scored once, at the end. Dentists checked against each other score 0.84.</p>
+  <p class="lede">Inkling-Small is fine-tuned, then trained with reinforcement learning. Validation is tracked here. The test split is scored once, at the end.</p>
 
   <div class="top">
     <div class="viewer">
@@ -91,7 +92,7 @@
         <span><i class="cell" style="background:var(--s2)"></i>0.5</span>
         <span><i class="cell" style="background:var(--s4)"></i>1.0</span>
         <span><i class="cell" style="box-shadow:inset 0 0 0 1.5px var(--fail-ink)"></i>unreadable answer</span>
-        <span><i class="cell" style="background:repeating-linear-gradient(45deg,var(--gray-200),var(--gray-200) 3px,#fff 3px,#fff 6px)"></i>still running</span>
+        <span><i class="cell" style="background:repeating-linear-gradient(45deg,var(--line),var(--line) 3px,#fff 3px,#fff 6px)"></i>still running</span>
       </div>
     </div>
   </div>
@@ -118,8 +119,8 @@
     <ul class="footer-links"><li><a href="https://github.com/dylantirandaz/dental-environments">dental-environments</a> <span class="sep">·</span> <a href="https://github.com/dylantirandaz/periapical-rl">periapical-rl</a> <span class="sep">·</span> <a href="https://huggingface.co/datasets/tirandazdylan/periapical-lesions-pai">Dataset</a></li></ul>
   </div>
   <div class="footer-aside">
-    <h4>Data</h4><p>Films: Do et al. 2024, CC BY 4.0. Labels and splits come from the Hugging Face dataset.</p>
-    <h4>Colophon</h4><p>Iowan Old Style and JetBrains Mono. Layout after benchmarks.bio. Numbers come from <code>data/</code> in the public repo.</p>
+    <p>Films: Do et al. 2024, CC BY 4.0.</p>
+    <p>Set in Instrument Serif, Spectral and JetBrains Mono.</p>
   </div>
 </div></footer>
 <script>
