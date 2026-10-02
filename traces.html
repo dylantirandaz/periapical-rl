@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Traces · PanoRead</title>
-<meta name="description" content="PanoRead traces: every film the RL student answered, its boxes against the dentists', and the full reply.">
+<meta name="description" content="PanoRead agent traces: public messages, tool calls, returned thinking, crop images and model boxes against dentist boxes.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
@@ -19,6 +19,7 @@
     --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   ::selection { background: var(--sky); color: var(--ink); }
   html { font-family: var(--serif); font-size: 17px; -webkit-font-smoothing: antialiased; }
   body { margin: 0; color: var(--ink); background: #fff; line-height: 1.5; }
@@ -50,35 +51,49 @@
   header.hero .meta { margin: 1.2rem 0 0; }
   .controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.75rem 1.75rem; margin-top: 1.4rem; font-family: var(--sans); font-size: 0.84rem; }
   .controls label { display: flex; align-items: baseline; gap: 0.5rem; }
-  .controls select { font: inherit; color: var(--ink); background: #fff; border: 1px solid var(--rule); border-radius: 0.25rem; padding: 0.25rem 0.4rem; }
+  .controls select { min-width: 0; max-width: 100%; font: inherit; color: var(--ink); background: #fff; border: 1px solid var(--rule); border-radius: 0.25rem; padding: 0.4rem; }
+  .controls label { max-width: 100%; min-width: 0; }
   a { color: var(--ink); text-decoration: underline; text-underline-offset: 0.18em; }
   a:hover { color: var(--sky-ink); }
   main.wrap { padding-bottom: 2rem; }
   .result-section { margin-bottom: 4rem; scroll-margin-top: 6rem; }
   .section-heading { margin: 0 auto 2rem; text-align: center; }
   .section-heading h2 { margin: 0; font-size: clamp(1.4rem, 2.4vw, 1.8rem); font-weight: 400; letter-spacing: -0.02em; }
-  .top { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 1.75rem; align-items: start; }
+  .viewer-layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 1.75rem; align-items: start; }
+  .viewer-layout > *, .viewer { min-width: 0; }
   .viewer { display: grid; gap: 0.5rem; }
   .film { position: relative; background: var(--film); border-radius: 4px; overflow: hidden; }
   .film img { display: block; width: 100%; height: auto; }
   .film svg { position: absolute; inset: 0; width: 100%; height: 100%; }
   .film .empty { color: #97a3b2; padding: 3rem 1.5rem; }
   .legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem; font-family: var(--sans); font-size: 0.78rem; color: var(--mute); }
-  .legend span { display: inline-flex; align-items: center; gap: 0.4rem; }
+  .legend span, .legend label { display: inline-flex; align-items: center; gap: 0.4rem; }
   .legend .sw { width: 16px; height: 10px; border: 2px solid; border-radius: 1px; }
   .legend .cell { width: 12px; height: 12px; border-radius: 2px; }
   .label { font-family: var(--sans); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mute); display: flex; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.5rem; }
   .grid { display: flex; flex-wrap: wrap; gap: 3px; }
-  .cellbtn { width: 15px; height: 15px; border: 0; border-radius: 3px; padding: 0; cursor: pointer; }
+  .cellbtn { width: 24px; height: 24px; border: 0; border-radius: 3px; padding: 0; cursor: pointer; }
   .cellbtn:hover { outline: 2px solid var(--ink); }
   .cellbtn.sel { outline: 2px solid var(--apricot-ink); }
   .cellbtn:focus-visible { outline: 2px solid var(--sky-ink); }
   .cellbtn.noreply { box-shadow: inset 0 0 0 1.5px var(--apricot-ink); }
-  .reply { margin: 0; padding: 1.1rem 1.25rem; background: var(--sky-wash); border-radius: 0.35rem; font-family: var(--mono); font-size: 0.78rem; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 34rem; overflow: auto; }
-  .reply.none { font-family: var(--sans); color: var(--mute); background: var(--band); }
-  .tip { position: fixed; pointer-events: none; background: var(--ink); color: #fff; font-family: var(--sans); font-size: 12px; padding: 6px 8px; border-radius: 4px; white-space: nowrap; z-index: 30; }
+  .reply { margin: 0; padding: 1.1rem 1.25rem; background: var(--sky-wash); border-radius: 0.35rem; font-family: var(--mono); font-size: 0.78rem; line-height: 1.55; text-align: left; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 34rem; overflow: auto; }
+  details { margin: 0.8rem 0; min-width: 0; }
+  summary { cursor: pointer; font-family: var(--sans); font-size: 0.85rem; overflow-wrap: anywhere; }
+  .caption, .meta, .errors { overflow-wrap: anywhere; }
+  .errors { padding: 0.8rem 1rem; background: var(--apricot-wash); font-family: var(--sans); font-size: 0.85rem; }
+  .trace-images { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 1rem; }
+  .trace-images figure { margin: 1rem 0; min-width: 0; }
+  .trace-images img { display: block; max-width: 100%; height: auto; background: var(--film); }
+  .trace-images figcaption { overflow-wrap: anywhere; }
+  .scroll { max-width: 100%; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-family: var(--sans); font-size: 0.78rem; }
+  th, td { padding: 0.6rem; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: top; }
+  th { font-weight: 400; color: var(--mute); }
+  td:last-child { min-width: 8rem; overflow-wrap: anywhere; }
+  a:focus-visible, summary:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--sky-ink); outline-offset: 3px; }
   footer.wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0 1rem; padding-top: 1rem; padding-bottom: 2rem; border-top: 1px solid var(--rule); font-family: var(--sans); font-size: 0.75rem; color: var(--mute); }
-  @media (max-width: 900px) { .top { grid-template-columns: 1fr; } }
+  @media (max-width: 900px) { .viewer-layout { grid-template-columns: 1fr; } }
   @media (max-width: 600px) {
     .wrap { width: calc(100% - 2rem); }
     nav.top .wrap { width: calc(100% - 2rem); flex-wrap: wrap; padding: 1rem 0; gap: 0.85rem; }
@@ -97,24 +112,26 @@
 <header class="hero">
   <div class="wrap">
     <h1>Traces</h1>
-    <p class="meta" id="run-meta">Loading…</p>
+    <p class="meta" id="run-meta" role="status">Loading benchmark data…</p>
     <div class="controls">
-      <label>Run <select id="run-select"></select></label>
-      <label>Checkpoint <select id="view-select"></select></label>
+      <label>Model <select id="run-select" disabled></select></label>
+      <label>Case <select id="case-select" disabled></select></label>
     </div>
+    <p class="caption">Agent benchmark only. <a href="./">Separate RL dashboard</a>.</p>
+    <details><summary>Run data and protocol</summary><pre class="reply" id="run-data"></pre></details>
   </div>
 </header>
 
 <main class="wrap">
 
 <section class="result-section" aria-label="Film viewer">
-  <div class="top">
+  <div class="viewer-layout">
     <div class="viewer">
       <div class="film" id="film"><div class="empty">Loading…</div></div>
       <div class="caption" id="caption"></div>
       <div class="legend">
-        <span><i class="sw" style="border-color:var(--sky-ink)"></i>dentists</span>
-        <span><i class="sw" style="border-color:var(--apricot-ink)"></i>student</span>
+        <label><input id="show-dentists" type="checkbox" checked><i class="sw" style="border-color:#73bfff"></i>dentists</label>
+        <label><input id="show-model" type="checkbox" checked><i class="sw" style="border-color:#ffbd73"></i>model</label>
       </div>
     </div>
     <div>
@@ -125,20 +142,47 @@
         <span><i class="cell" style="background:var(--s0)"></i>0</span>
         <span><i class="cell" style="background:var(--s2)"></i>0.5</span>
         <span><i class="cell" style="background:var(--s4)"></i>1</span>
-        <span><i class="cell" style="box-shadow:inset 0 0 0 1.5px var(--apricot-ink)"></i>reply missing</span>
+        <span><i class="cell" style="box-shadow:inset 0 0 0 1.5px var(--apricot-ink)"></i>error / unscored</span>
       </div>
     </div>
   </div>
 </section>
 
-<section class="result-section" aria-label="Model thinking" id="thinking-section" hidden>
-  <div class="section-heading"><h2>Thinking</h2></div>
-  <pre class="reply thinking" id="thinking"></pre>
+<section class="result-section" id="case-section" hidden aria-labelledby="case-title">
+  <div class="section-heading"><h2 id="case-title">Case trace</h2></div>
+  <div class="errors" id="case-status" role="status"></div>
+  <p class="caption" id="thinking-note"></p>
+  <p class="caption"><a id="trace-download" hidden download>Download public trace JSON</a></p>
+  <details id="thinking-section" hidden>
+    <summary>Returned thinking</summary>
+    <pre class="reply" id="thinking"></pre>
+  </details>
+  <details>
+    <summary>Selected attempt final reply</summary>
+    <pre class="reply" id="reply"></pre>
+  </details>
+  <p class="caption" id="trace-status" role="status"></p>
+  <div class="controls" id="attempt-control" hidden>
+    <label>Attempt <select id="attempt-select"></select></label>
+  </div>
+  <div class="errors" id="attempt-status" hidden></div>
+  <details id="warnings-section" hidden>
+    <summary id="warnings-title"></summary>
+    <ul class="caption" id="warnings"></ul>
+  </details>
+  <details id="tools-section" hidden>
+    <summary>Tool definitions</summary>
+    <pre class="reply" id="tools">Open to load tool definitions.</pre>
+  </details>
+  <details id="calls-section" hidden>
+    <summary>Model calls</summary>
+    <div class="scroll" id="calls"></div>
+  </details>
+  <h3>Public conversation</h3>
+  <p class="caption">Message order is preserved. Open each message for its full public fields and images. Private or encrypted reasoning is not public.</p>
+  <div id="conversation"></div>
 </section>
-<section class="result-section" aria-label="Model reply">
-  <div class="section-heading"><h2>Reply</h2></div>
-  <pre class="reply" id="reply"></pre>
-</section>
+<noscript><p>Enable JavaScript to view benchmark traces. <a href="data/benchmarks.json">Read the benchmark index</a>.</p></noscript>
 
 </main>
 
@@ -147,142 +191,387 @@
   <p><a href="benchmark.html">Leaderboard</a> · <a href="https://github.com/dylantirandaz/periapical-rl">Source</a></p>
 </footer>
 
-<div class="tip" id="tip" hidden></div>
-
 <script>
 (() => {
-  const DEFAULT_RUN = "s-rl-films";
-  const REPORTED_STEP = 50;
   const $ = (id) => document.getElementById(id);
   const el = (tag, attrs = {}, text) => {
     const node = document.createElement(tag);
-    for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+    for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
     if (text !== undefined) node.textContent = text;
     return node;
   };
   const svgEl = (tag, attrs) => {
     const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
-    for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+    for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
     return node;
   };
-  const shade = (r) => `var(--s${Math.max(0, Math.min(4, Math.round(r * 4)))})`;
-  const fetchJson = async (path) => {
-    const res = await fetch(`${path}?t=${Date.now()}`);
-    if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);
-    return res.json();
-  };
-  const prettyReply = (text) => {
-    try { return JSON.stringify(JSON.parse(text), null, 2); } catch { return text; }
-  };
-
-  const summaries = new Map();
-  let films = [], selected = null;
-
-  function tip(evt, text) {
-    const t = $("tip");
-    if (!text) { t.hidden = true; return; }
-    t.textContent = text; t.hidden = false;
-    t.style.left = `${evt.clientX + 12}px`; t.style.top = `${evt.clientY + 12}px`;
+  const score = (value) => Number.isFinite(value) ? value.toFixed(3) : "unscored";
+  const complete = (entry) => entry.status === "complete" && entry.expected > 0 &&
+    entry.succeeded === entry.expected && entry.errors === 0 &&
+    Number.isFinite(entry.mean_reward) && Number.isFinite(entry.pass_rate);
+  const base = new URL("./", location.href);
+  function localPath(value, image = false) {
+    if (typeof value !== "string" || !/^(?:data|films)\//.test(value)) return null;
+    const url = new URL(value, base);
+    if (url.origin !== base.origin || url.search || url.hash ||
+        !["data/", "films/"].some((prefix) => url.pathname.startsWith(base.pathname + prefix))) return null;
+    if (image && !/\.(?:png|jpe?g|webp|gif)$/i.test(url.pathname)) return null;
+    return url.href;
+  }
+  async function fetchJson(path) {
+    let response;
+    try { response = await fetch(path, { cache: "no-store" }); }
+    catch (error) { throw new Error(`${path}: network error (${error.message}); no HTTP status received`); }
+    if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
+    try { return await response.json(); }
+    catch { throw new Error(`${path}: HTTP ${response.status}, invalid JSON`); }
+  }
+  let entries = [], films = [], loadId = 0, caseId = 0, activeTrace = null;
+  let dentistLayer, modelLayer;
+  const traceCache = new Map();
+  async function fetchTrace(path) {
+    let trace = traceCache.get(path);
+    if (trace) traceCache.delete(path);
+    else trace = await fetchJson(path);
+    traceCache.set(path, trace);
+    while (traceCache.size > 3) traceCache.delete(traceCache.keys().next().value);
+    return trace;
   }
 
-  async function summary(runId) {
-    if (!summaries.has(runId)) summaries.set(runId, await fetchJson(`data/${runId}/summary.json`));
-    return summaries.get(runId);
+  function imageFigure(path, label) {
+    const figure = el("figure");
+    const link = el("a", { href: path, target: "_blank", rel: "noopener" });
+    const image = el("img", { src: path, alt: label, loading: "lazy" });
+    image.addEventListener("error", () => image.replaceWith(el("p", { class: "errors" }, `Image unavailable: ${label}`)), { once: true });
+    link.append(image);
+    figure.append(link, el("figcaption", { class: "caption" }, label));
+    return figure;
   }
-
-  function defaultView(s) {
-    const views = s.eval_views || [];
-    const reported = views.find((v) => Number(v.split("_")[1]) === REPORTED_STEP);
-    return reported || views[views.length - 1] || null;
+  function messageImages(value, found = new Map()) {
+    if (Array.isArray(value)) {
+      for (const item of value) messageImages(item, found);
+    } else if (value && typeof value === "object") {
+      const path = localPath(value.url, true);
+      if (path) found.set(path, value);
+      for (const item of Object.values(value)) messageImages(item, found);
+    }
+    return found;
   }
-
-  function renderFilm(film) {
-    const box = $("film"); box.replaceChildren();
-    const svg = svgEl("svg", { viewBox: "0 0 1 1", preserveAspectRatio: "none", "aria-hidden": "true" });
-    const draw = (boxes, color, width) => boxes.forEach(([x0, y0, x1, y1]) => svg.append(svgEl("rect", {
-      x: x0, y: y0, width: Math.max(0, x1 - x0), height: Math.max(0, y1 - y0), fill: "none", stroke: color,
-      "stroke-width": width, "vector-effect": "non-scaling-stroke" })));
-    draw(film.boxes, "var(--sky-ink)", 3);
-    draw(film.lesions.map((l) => l.box), "var(--apricot-ink)", 2.5);
-    box.append(el("img", { src: `films/${film.film}.jpg`, alt: `Dental X-ray ${film.film}` }), svg);
-    const dentists = film.pai.join(", ");
-    const student = film.parsed || film.lesions.length ? film.lesions.map((l) => l.pai).join(", ") || "no lesions" : "unreadable";
-    $("caption").textContent = `film ${film.film} · reward ${film.reward.toFixed(2)} · dentists PAI ${dentists} · student PAI ${student}`;
-    const think = $("thinking"), thinkSection = $("thinking-section");
-    if (film.thinking) { thinkSection.hidden = false; think.textContent = film.thinking; }
-    else thinkSection.hidden = true;
-    const pre = $("reply");
-    if (film.reply !== undefined) { pre.className = "reply"; pre.textContent = prettyReply(film.reply); }
-    else { pre.className = "reply none"; pre.textContent = "This checkpoint was published before replies were kept; it republishes with them when the training machine next syncs."; }
+  function messagePreview(message) {
+    if (typeof message.content === "string") return message.content.replace(/\s+/g, " ").slice(0, 120);
+    if (Array.isArray(message.content)) {
+      const text = message.content.map((part) => typeof part === "string" ? part : part.text || "").join(" ");
+      if (text) return text.replace(/\s+/g, " ").slice(0, 120);
+    }
+    const imageCount = messageImages(message).size;
+    if (imageCount) return `${imageCount} image${imageCount === 1 ? "" : "s"}`;
+    if (message.tool_calls?.length) return message.tool_calls.map((call) => call.function?.name || call.name || "tool call").join(", ").slice(0, 120);
+    if (message.reasoning_content) return "Returned thinking";
+    return "Public message fields";
   }
-
-  function renderGrid() {
-    const grid = $("grid"); grid.replaceChildren();
-    let best = null;
-    films.forEach((film) => {
-      const key = film.film;
-      const b = el("button", { type: "button", class: "cellbtn" + (film.reply === undefined ? " noreply" : ""),
-        "aria-label": `film ${film.film}, reward ${film.reward.toFixed(2)}` });
-      b.style.background = shade(film.reward);
-      b.dataset.key = key;
-      const show = () => { selected = key; renderFilm(film); markSelected(); };
-      b.addEventListener("click", show);
-      b.addEventListener("mousemove", (e) => tip(e, `film ${film.film} · reward ${film.reward.toFixed(2)}`));
-      b.addEventListener("mouseleave", (e) => tip(e, null));
-      grid.append(b);
-      if (!best || film.reward > best.film.reward) best = { film, show };
+  function renderConversation(messages) {
+    const container = $("conversation");
+    container.replaceChildren();
+    if (!messages.length) {
+      container.append(el("p", { class: "errors" }, "No public messages or prompt were returned."));
+      return;
+    }
+    messages.forEach((message, index) => {
+      const detail = el("details");
+      detail.append(el("summary", {}, `${index + 1}. ${message.role || "message"} · ${messagePreview(message)}`),
+        el("pre", { class: "reply" }, JSON.stringify(message, null, 2)));
+      const images = messageImages(message);
+      if (images.size) {
+        const gallery = el("div", { class: "trace-images" });
+        let imageIndex = 0;
+        for (const [path, image] of images) {
+          const display = image.display_size;
+          const original = image.original_size;
+          const size = Array.isArray(display) && Array.isArray(original)
+            ? `; shown at ${Math.max(...display)} px; original ${original.join("x")}` : "";
+          gallery.append(imageFigure(path, `Message ${index + 1}, image ${++imageIndex}${size}`));
+        }
+        detail.append(gallery);
+      }
+      container.append(detail);
     });
-    $("grid-note").textContent = `${films.length} films`;
-    const current = grid.querySelector(`[data-key="${selected}"]`);
-    if (current) current.click(); else if (best) best.show();
   }
-
-  const markSelected = () => document.querySelectorAll(".cellbtn").forEach((b) => b.classList.toggle("sel", selected === b.dataset.key));
-
-  function renderMeta(s, view) {
-    const [split] = view.split("_");
-    const mean = films.reduce((t, f) => t + f.reward, 0) / films.length;
-    const where = s.stage === "benchmark" ? `${split}, one call` : `${split} check at step ${Number(view.split("_")[1])}`;
-    $("run-meta").textContent = `${s.name} · ${s.model} · ${where} · mean reward ${mean.toFixed(3)}`;
+  function appendErrors(container, errors) {
+    if (!Array.isArray(errors) || !errors.length) return;
+    const list = el("ul");
+    for (const error of errors) list.append(el("li", {}, typeof error === "string" ? error : JSON.stringify(error)));
+    container.append(list);
   }
-
-  async function loadView(runId, view) {
-    films = await fetchJson(`data/${runId}/evals/${view}.json`);
-    selected = null;
-    renderGrid();
-    renderMeta(await summary(runId), view);
+  function renderCalls(calls) {
+    $("calls").replaceChildren();
+    if (!calls.length) {
+      $("calls").append(el("p", { class: "caption" }, "No model calls recorded."));
+      return;
+    }
+    const table = el("table"), head = el("thead"), heading = el("tr"), body = el("tbody");
+    for (const label of ["Index", "Finish reason", "Prompt tokens", "Completion tokens", "Cached tokens", "Seconds", "Error"]) {
+      heading.append(el("th", { scope: "col" }, label));
+    }
+    head.append(heading);
+    calls.forEach((call, index) => {
+      const usage = call.usage || {}, time = call.time || {};
+      const seconds = Number.isFinite(time.start) && Number.isFinite(time.end) ? (time.end - time.start).toFixed(2) : "—";
+      const row = el("tr");
+      for (const value of [index, call.finish_reason, usage.prompt_tokens, usage.completion_tokens,
+        usage.cached_input_tokens, seconds, call.error == null ? "—" : JSON.stringify(call.error)]) {
+        row.append(el("td", {}, value == null ? "—" : String(value)));
+      }
+      body.append(row);
+    });
+    table.append(head, body);
+    $("calls").append(table);
   }
-
-  async function fillViews(runId, chosen) {
-    const s = await summary(runId);
-    const sel = $("view-select"); sel.replaceChildren();
-    (s.eval_views || []).forEach((v) => sel.append(el("option", { value: v },
-      s.stage === "benchmark" ? v.split("_")[0] : v.replace("_", " · step "))));
-    sel.value = chosen || defaultView(s);
-    sel.onchange = () => loadView(runId, sel.value);
-    return sel.value;
+  function renderAttempt(index) {
+    const attempt = activeTrace.attempts[index];
+    if (!attempt) return;
+    $("attempt-select").value = String(index);
+    const trace = attempt.traces?.[0];
+    const nodes = trace?.nodes || [];
+    const messages = nodes.length ? nodes.map((node) => node.message) : activeTrace.prompt || [];
+    $("attempt-status").hidden = false;
+    $("attempt-status").replaceChildren(el("p", {}, `Attempt ${attempt.attempt} · ${attempt.status} · reward ${score(attempt.reward)}` +
+      (attempt.selected ? " · selected for scoring" : " · not selected; film boxes and final reply above belong to the scored attempt")));
+    appendErrors($("attempt-status"), attempt.errors);
+    const warnings = Array.isArray(attempt.warnings) ? attempt.warnings : [];
+    $("warnings-section").hidden = !warnings.length;
+    $("warnings-section").open = false;
+    $("warnings-title").textContent = `Warnings after completion (${warnings.length})`;
+    $("warnings").replaceChildren(...warnings.map((warning) => el("li", {}, warning)));
+    const thinking = messages.map((message) => message.reasoning_content)
+      .filter((value) => typeof value === "string" && value.length).join("\n\n");
+    $("thinking-note").textContent = thinking
+      ? "Only API-returned reasoning is public. Returned thinking below is from this attempt."
+      : "No reasoning_content text was returned for this attempt. Hidden reasoning is not available.";
+    $("thinking-section").hidden = !thinking;
+    $("thinking").textContent = thinking;
+    $("calls-section").hidden = false;
+    $("calls-section").open = false;
+    renderCalls(trace?.calls || []);
+    prepareTools(trace, $("run-select").value, caseId);
+    renderConversation(messages);
   }
-
-  async function main() {
-    const fetchOr = async (path, fallback) => {
-      try { return await fetchJson(path); } catch { return fallback; }
+  function resetTrace() {
+    activeTrace = null;
+    $("trace-status").textContent = "";
+    $("attempt-control").hidden = true;
+    $("attempt-select").replaceChildren();
+    $("attempt-status").hidden = true;
+    $("warnings-section").hidden = true;
+    $("warnings-section").open = false;
+    $("warnings").replaceChildren();
+    $("thinking-section").hidden = true;
+    $("thinking").textContent = "";
+    $("tools-section").hidden = true;
+    $("tools-section").open = false;
+    $("tools-section").ontoggle = null;
+    $("tools").textContent = "Open to load tool definitions.";
+    $("calls-section").hidden = true;
+    $("calls-section").open = false;
+    $("calls").replaceChildren();
+    $("conversation").replaceChildren();
+  }
+  function prepareTools(trace, runId, request) {
+    const section = $("tools-section");
+    section.hidden = !trace;
+    section.open = false;
+    section.ontoggle = null;
+    $("tools").textContent = "Open to load tool definitions.";
+    if (!trace) return;
+    const isCurrent = () => request === caseId &&
+      activeTrace?.attempts[Number($("attempt-select").value)]?.traces?.[0] === trace;
+    let loaded = false;
+    section.ontoggle = async () => {
+      if (!section.open || loaded) return;
+      loaded = true;
+      const ref = trace.tools_ref;
+      if (typeof ref !== "string" || !/^[a-f0-9]{16}$/.test(ref)) {
+        $("tools").textContent = "Tool definitions unavailable: invalid or missing tools_ref.";
+        return;
+      }
+      const path = localPath(`data/${encodeURIComponent(runId)}/tools/${ref}.json`);
+      $("tools").textContent = `Loading ${path}…`;
+      try {
+        const tools = await fetchJson(path);
+        if (isCurrent()) $("tools").textContent = JSON.stringify(tools, null, 2);
+      } catch (error) {
+        if (isCurrent()) $("tools").textContent = `Tool definitions unavailable: ${error.message}`;
+      }
     };
-    const benchmarks = await fetchOr("data/benchmarks.json", []);
-    const runs = await fetchJson("data/runs.json");
-    const runSel = $("run-select");
-    benchmarks.forEach((b) => runSel.append(el("option", { value: b.id }, b.name)));
-    runs.forEach((r) => runSel.append(el("option", { value: r.id }, r.id)));
-    const preferred = benchmarks[0]?.id || DEFAULT_RUN;
-    runSel.value = [...benchmarks.map((b) => b.id), ...runs.map((r) => r.id)].includes(preferred)
-      ? preferred : (benchmarks[0] || runs[0]).id;
-    const view = await fillViews(runSel.value);
-    await loadView(runSel.value, view);
-    runSel.onchange = async () => { await loadView(runSel.value, await fillViews(runSel.value)); };
   }
-
-  main().catch((err) => {
-    $("run-meta").textContent = err.message;
-    $("film").replaceChildren(el("div", { class: "empty" }, err.message));
+  async function loadCaseTrace(film, request) {
+    const path = localPath(film.trace_path);
+    if (!path) {
+      $("trace-status").textContent = `Trace unavailable: invalid local path ${film.trace_path}`;
+      return;
+    }
+    $("trace-status").textContent = `Loading trace: ${path}`;
+    try {
+      const trace = await fetchTrace(path);
+      if (request !== caseId) return;
+      if (trace.schema !== 2 || !Array.isArray(trace.attempts)) throw new Error(`${path}: unsupported trace schema`);
+      const selected = trace.attempts.findIndex((attempt) => attempt.selected === true);
+      if (selected < 0) throw new Error(`${path}: no selected attempt`);
+      activeTrace = trace;
+      trace.attempts.forEach((attempt, index) => {
+        const errors = Array.isArray(attempt.errors) ? attempt.errors.length : 0;
+        $("attempt-select").append(el("option", { value: String(index) },
+          `Attempt ${attempt.attempt} · ${attempt.status} · ${score(attempt.reward)} · ${errors} errors${attempt.selected ? " · selected" : ""}`));
+      });
+      $("attempt-control").hidden = trace.attempts.length < 2;
+      $("trace-status").textContent = `${trace.attempts.length} recorded attempt${trace.attempts.length === 1 ? "" : "s"}.`;
+      renderAttempt(selected);
+    } catch (error) {
+      if (request !== caseId) return;
+      resetTrace();
+      $("trace-status").textContent = `Trace unavailable: ${error.message}`;
+      $("thinking-note").textContent = "Thinking availability cannot be checked without the trace.";
+    }
+  }
+  function drawBoxes(layer, boxes, color, dashed) {
+    for (const box of boxes) {
+      if (!Array.isArray(box) || box.length !== 4 || !box.every(Number.isFinite)) continue;
+      const [x0, y0, x1, y1] = box;
+      layer.append(svgEl("rect", { x: x0, y: y0, width: Math.max(0, x1 - x0),
+        height: Math.max(0, y1 - y0), fill: "none", stroke: color, "stroke-width": 2.5,
+        "stroke-dasharray": dashed ? "6 3" : "none", "vector-effect": "non-scaling-stroke" }));
+    }
+  }
+  function showLayers() {
+    if (dentistLayer) dentistLayer.style.display = $("show-dentists").checked ? "" : "none";
+    if (modelLayer) modelLayer.style.display = $("show-model").checked ? "" : "none";
+  }
+  function renderFilm(index) {
+    const film = films[index];
+    if (!film) return;
+    const request = ++caseId;
+    resetTrace();
+    $("case-select").value = String(index);
+    [...$("grid").children].forEach((button, i) => {
+      button.classList.toggle("sel", i === index);
+      button.setAttribute("aria-pressed", String(i === index));
+    });
+    const box = $("film");
+    box.replaceChildren();
+    const svg = svgEl("svg", { viewBox: "0 0 1 1", preserveAspectRatio: "none", "aria-hidden": "true" });
+    dentistLayer = svgEl("g", {});
+    modelLayer = svgEl("g", {});
+    const lesions = Array.isArray(film.lesions) ? film.lesions : [];
+    drawBoxes(dentistLayer, film.boxes || [], "#73bfff", false);
+    drawBoxes(modelLayer, lesions.map((lesion) => lesion.box), "#ffbd73", true);
+    svg.append(dentistLayer, modelLayer);
+    const path = localPath(film.image_path, true) || localPath(`films/${encodeURIComponent(film.film)}.jpg`, true);
+    if (path) {
+      const image = el("img", { src: path, alt: `Dental X-ray ${film.film}` });
+      image.addEventListener("error", () => {
+        image.replaceWith(el("div", { class: "empty" }, "Original film image unavailable."));
+        svg.remove();
+      }, { once: true });
+      box.append(image, svg);
+    } else box.append(el("div", { class: "empty" }, "Original film image unavailable."));
+    showLayers();
+    const dentists = (film.pai || []).join(", ") || "no lesions";
+    const model = film.parsed ? lesions.map((lesion) => lesion.pai).join(", ") || "no lesions" : "unreadable";
+    $("caption").textContent = `Case ${film.film} · selected attempt reward ${score(film.reward)} · dentists PAI ${dentists} · model PAI ${model}`;
+    $("case-section").hidden = false;
+    $("case-title").textContent = `Case ${film.film}`;
+    $("case-status").replaceChildren(el("p", {}, `Selected attempt: ${film.status} · answer ${film.parsed ? "parsed" : "not parsed"} · ${film.model_calls} model calls · ${film.images_viewed} images viewed` +
+      (film.stop_condition === "max_turns" ? " · ended at the 50-turn limit" : "")));
+    appendErrors($("case-status"), film.errors);
+    $("thinking-note").textContent = film.has_thinking ? "Returned thinking is loading from the trace." : "The row reports no returned thinking. Loading trace.";
+    $("reply").textContent = film.reply == null ? "No final reply returned." : film.reply;
+    const download = localPath(film.trace_path);
+    $("trace-download").hidden = !download;
+    if (download) $("trace-download").href = download;
+    else $("trace-download").removeAttribute("href");
+    void loadCaseTrace(film, request);
+  }
+  function clearCases(message) {
+    ++caseId;
+    resetTrace();
+    films = [];
+    dentistLayer = modelLayer = null;
+    $("case-select").replaceChildren();
+    $("case-select").disabled = true;
+    $("grid").replaceChildren();
+    $("grid-note").textContent = "";
+    $("caption").textContent = "";
+    $("case-section").hidden = true;
+    $("conversation").replaceChildren();
+    $("film").replaceChildren(el("div", { class: "empty" }, message));
+  }
+  function renderGrid() {
+    const grid = $("grid");
+    const select = $("case-select");
+    films.forEach((film, index) => {
+      const label = `Case ${film.film} · ${film.status} · reward ${score(film.reward)}`;
+      const button = el("button", { type: "button", class: "cellbtn", title: label, "aria-label": label });
+      if (film.status !== "success" || !Number.isFinite(film.reward)) button.classList.add("noreply");
+      button.style.background = Number.isFinite(film.reward)
+        ? `var(--s${Math.max(0, Math.min(4, Math.round(film.reward * 4)))})` : "transparent";
+      button.addEventListener("click", () => renderFilm(index));
+      grid.append(button);
+      select.append(el("option", { value: String(index) }, label));
+    });
+    $("grid-note").textContent = `${films.length} published cases`;
+    select.disabled = !films.length;
+    if (films.length) renderFilm(0);
+  }
+  async function loadRun() {
+    const request = ++loadId;
+    const entry = entries.find((item) => item.id === $("run-select").value);
+    if (!entry) return;
+    clearCases("Loading cases…");
+    $("run-data").textContent = JSON.stringify(entry, null, 2);
+    const harness = { claude_code: "Claude Code", codex: "Codex" }[entry.harness] ?? entry.harness;
+    $("run-meta").textContent = `${entry.name} · ${entry.model} · ${harness} ${entry.harness_version || ""} · ${entry.split} · ${entry.status} · ${entry.succeeded}/${entry.expected} scored · ${entry.errors} errors` +
+      (complete(entry) ? ` · mean reward ${score(entry.mean_reward)}` : " · unranked") +
+      (entry.reason ? ` · ${entry.reason}` : "");
+    const url = new URL(location.href);
+    url.searchParams.set("run", entry.id);
+    history.replaceState(null, "", url);
+    try {
+      const data = await fetchJson(`data/${encodeURIComponent(entry.id)}/evals/test_0000.json`);
+      if (request !== loadId) return;
+      if (!Array.isArray(data)) throw new Error("Invalid case data");
+      films = data;
+      if (!films.length) {
+        clearCases(entry.reason || "No case traces published for this run.");
+        return;
+      }
+      renderGrid();
+    } catch (error) {
+      if (request !== loadId) return;
+      clearCases(`Case data unavailable: ${error.message}. ${entry.reason || ""}`);
+    }
+  }
+  async function main() {
+    entries = await fetchJson("data/benchmarks.json");
+    if (!Array.isArray(entries)) throw new Error("Invalid benchmark index");
+    if (!entries.length) {
+      $("run-meta").textContent = "No benchmark entries published.";
+      clearCases("No benchmark traces published. RL data is separate.");
+      return;
+    }
+    const select = $("run-select");
+    for (const entry of entries) select.append(el("option", { value: entry.id }, `${entry.name} · ${entry.status}`));
+    const requested = new URLSearchParams(location.search).get("run");
+    if (entries.some((entry) => entry.id === requested)) select.value = requested;
+    select.disabled = false;
+    select.addEventListener("change", loadRun);
+    $("attempt-select").addEventListener("change", () => renderAttempt(Number($("attempt-select").value)));
+    $("case-select").addEventListener("change", () => renderFilm(Number($("case-select").value)));
+    $("show-dentists").addEventListener("change", showLayers);
+    $("show-model").addEventListener("change", showLayers);
+    await loadRun();
+  }
+  main().catch((error) => {
+    $("run-meta").textContent = `Benchmark unavailable: ${error.message}`;
+    clearCases("Cannot load benchmark data. No RL fallback is used.");
   });
 })();
 </script>

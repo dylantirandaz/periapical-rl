@@ -1,1 +1,0 @@
-{"id":"benchmark-gpt-6-astra","name":"GPT-6 Astra \u00b7 benchmark","stage":"benchmark","model":"openai/gpt-6-astra","harness":"one call","films":25,"eval_views":["test_0000"],"mean_reward":0.13430769230769232,"updated":1790816619}
