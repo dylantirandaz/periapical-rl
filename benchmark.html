@@ -206,7 +206,7 @@
   <div class="readout">
     <div class="scroll"><table class="board"><thead><tr><th class="rank">Rank</th><th>Model / harness</th><th>Status</th><th class="num">Scored / expected</th><th class="num">Errors</th><th class="num primary">Reward</th><th class="num">Pass %</th></tr></thead><tbody id="benchmark-rows"></tbody></table></div>
     <p class="caption" id="benchmark-status" role="status">Loading benchmark data…</p>
-    <p class="caption">Only complete runs are ranked. Failed and missing cases are not zero scores. A partial run stopped early because the inference budget ran out; its scored films are real, and a film that reached the 50-turn limit without an answer scores 0. Dentist reference: 59 films read twice, not the test set.</p>
+    <p class="caption">Only complete runs are ranked. Failed and missing cases are not zero scores. A partial run has not finished all 200 films; its scored films are real, and a film that reached the 50-turn limit without an answer scores 0. Gemini 3.8 Flash stopped when the inference budget ran out. DeepSeek V4.1 Flash and GLM 5.3 Flash are unfinished because their films upload about 250 MB each and the home network could not carry them. Dentist reference: 59 films read twice, not the test set.</p>
     <p class="caption" id="route-note" hidden></p>
     <noscript><p>Enable JavaScript to load the benchmark index. <a href="data/benchmarks.json">Read the data</a>.</p></noscript>
   </div>
