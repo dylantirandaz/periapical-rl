@@ -55,7 +55,7 @@
 <a class="skip-link" href="#main">Skip to content</a>
 <header class="site-header"><div class="container">
   <a class="brand" href="benchmark.html"><b>PanoRead</b><span>.periapical</span></a>
-  <nav class="site-nav" aria-label="Site"><a href="benchmark.html">Leaderboard</a><a href="traces.html" aria-current="page">Traces</a><a href="./">Live run</a><a class="optional" href="https://huggingface.co/datasets/tirandazdylan/periapical-lesions-pai">Data</a><a class="optional" href="https://github.com/dylantirandaz/dental-environments">Benchmark</a></nav>
+  <nav class="site-nav" aria-label="Site"><a href="benchmark.html">Leaderboard</a><a href="traces.html" aria-current="page">Traces</a><a class="optional" href="https://huggingface.co/datasets/tirandazdylan/periapical-lesions-pai">Data</a><a class="optional" href="https://github.com/dylantirandaz/dental-environments">Benchmark</a></nav>
 </div></header>
 
 <main id="main" class="container">
@@ -133,7 +133,7 @@
   <div>
     <a class="brand" href="benchmark.html"><b>PanoRead</b><span>.periapical</span></a>
     <p class="footer-label">Pages</p>
-    <ul class="footer-links"><li><a href="benchmark.html">Leaderboard</a></li><li><a href="traces.html">Agent traces</a></li><li><a href="./">Live training run</a></li></ul>
+    <ul class="footer-links"><li><a href="benchmark.html">Leaderboard</a></li><li><a href="traces.html">Agent traces</a></li></ul>
     <p class="footer-label">Source</p>
     <ul class="footer-links"><li><a href="https://github.com/dylantirandaz/dental-environments">dental-environments</a> <span class="sep">·</span> <a href="https://github.com/dylantirandaz/periapical-rl">periapical-rl</a> <span class="sep">·</span> <a href="https://huggingface.co/datasets/tirandazdylan/periapical-lesions-pai">Dataset</a></li></ul>
   </div>
@@ -163,10 +163,10 @@
     Number.isFinite(entry.mean_reward) && Number.isFinite(entry.pass_rate);
   const base = new URL("./", location.href);
   function localPath(value, image = false) {
-    if (typeof value !== "string" || !/^(?:data|films)\//.test(value)) return null;
+    if (typeof value !== "string" || !/^data\//.test(value)) return null;
     const url = new URL(value, base);
     if (url.origin !== base.origin || url.search || url.hash ||
-        !["data/", "films/"].some((prefix) => url.pathname.startsWith(base.pathname + prefix))) return null;
+        !url.pathname.startsWith(base.pathname + "data/")) return null;
     if (image && !/\.(?:png|jpe?g|webp|gif)$/i.test(url.pathname)) return null;
     return url.href;
   }
@@ -416,7 +416,7 @@
     drawBoxes(dentistLayer, film.boxes || [], "var(--box-dentist)", false);
     drawBoxes(modelLayer, lesions.map((lesion) => lesion.box), "var(--box-model)", true);
     svg.append(dentistLayer, modelLayer);
-    const path = localPath(film.image_path, true) || localPath(`films/${encodeURIComponent(film.film)}.jpg`, true);
+    const path = localPath(film.image_path, true);
     if (path) {
       const image = el("img", { src: path, alt: `Dental X-ray ${film.film}` });
       image.addEventListener("error", () => {

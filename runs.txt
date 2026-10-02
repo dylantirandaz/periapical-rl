@@ -1,4 +1,0 @@
-/home/dylantirandaz/tinker-rl/runs/s-rl-films s-rl-films rl 91 Inkling-Small RL on 2x tiles, whole-film episodes
-/home/dylantirandaz/tinker-rl/runs/i-tiles3x2 i-tiles3x2 fine-tuning 151 Inkling Tiles 3x2 at 2x, from the whole-film fine-tune
-/home/dylantirandaz/tinker-rl/runs/s-tiles3x2 s-tiles3x2 fine-tuning 151 Inkling-Small Tiles 3x2 at 2x (layout test)
-/home/dylantirandaz/tinker-rl/runs/sft-lr4e-4 sft-lr4e-4 fine-tuning 483 Inkling Whole film, one call (fine-tuning)
