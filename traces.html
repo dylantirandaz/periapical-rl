@@ -5,191 +5,142 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Traces · PanoRead</title>
 <meta name="description" content="PanoRead agent traces: public messages, tool calls, returned thinking, crop images and model boxes against dentist boxes.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap">
+<link rel="stylesheet" href="site.css">
 <style>
-  :root {
-    --ink: #23272c; --mute: #5c6470; --rule: #dde3ea; --band: #f4f7fa;
-    --sky: #a3c7e8; --sky-ink: #2b5d8a; --sky-wash: #f8fbfd;
-    --apricot: #f2c9a7; --apricot-ink: #b05f2c; --apricot-wash: #fdfaf6;
-    --film: #0d1117;
-    --s0: #eef3f9; --s1: #d7e5f2; --s2: #a3c7e8; --s3: #5b8fbe; --s4: #2b5d8a;
-    --serif: "Source Serif 4", Georgia, serif; --sans: Arial, Helvetica, sans-serif;
-    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  }
-  * { box-sizing: border-box; }
-  [hidden] { display: none !important; }
-  ::selection { background: var(--sky); color: var(--ink); }
-  html { font-family: var(--serif); font-size: 17px; -webkit-font-smoothing: antialiased; }
-  body { margin: 0; color: var(--ink); background: #fff; line-height: 1.5; }
-  .results-page { isolation: isolate; }
-  .results-page::before, .results-page::after { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; }
-  .results-page::before {
-    background:
-      radial-gradient(ellipse 55% 44% at 5% 18%, rgba(163, 199, 232, 0.17), rgba(178, 208, 236, 0.06) 48%, transparent 82%),
-      radial-gradient(ellipse 40% 48% at 24% 18%, rgba(196, 218, 240, 0.10), transparent 78%),
-      radial-gradient(ellipse 58% 64% at 100% 44%, rgba(197, 184, 220, 0.15), transparent 80%),
-      radial-gradient(ellipse 45% 36% at 88% 64%, rgba(214, 199, 235, 0.09), transparent 80%),
-      radial-gradient(ellipse 55% 48% at -5% 84%, rgba(242, 201, 167, 0.10), transparent 80%),
-      radial-gradient(ellipse 46% 40% at 14% 103%, rgba(246, 221, 191, 0.09), transparent 82%);
-  }
-  .results-page::after {
-    opacity: 0.018;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='paper'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23paper)'/%3E%3C/svg%3E");
-  }
-  .wrap { width: min(1100px, calc(100% - 3rem)); margin: 0 auto; }
-  nav.top { position: sticky; top: 0; z-index: 10; background: #fff; }
-  nav.top .wrap { display: flex; justify-content: space-between; align-items: baseline; padding: 1.1rem 0; border-bottom: 1px solid var(--rule); }
-  nav.top .brand { font-size: 1.35rem; font-weight: 500; line-height: 1; letter-spacing: -0.04em; text-decoration: none; color: var(--ink); }
-  nav.top .links { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem 1.6rem; font-family: var(--sans); font-size: 0.78rem; }
-  nav.top .links a { padding: 0.3rem 0; color: var(--ink); text-decoration: none; }
-  nav.top .links a:hover { color: var(--sky-ink); text-decoration: underline; }
-  header.hero { padding: 3rem 0 2.5rem; text-align: center; }
-  header.hero h1 { margin: 0; font-size: clamp(2rem, 4.5vw, 2.8rem); font-weight: 400; line-height: 1.15; letter-spacing: -0.03em; }
-  .meta, .caption { font-family: var(--sans); color: var(--mute); font-size: 0.82rem; line-height: 1.55; }
-  header.hero .meta { margin: 1.2rem 0 0; }
-  .controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.75rem 1.75rem; margin-top: 1.4rem; font-family: var(--sans); font-size: 0.84rem; }
-  .controls label { display: flex; align-items: baseline; gap: 0.5rem; }
-  .controls select { min-width: 0; max-width: 100%; font: inherit; color: var(--ink); background: #fff; border: 1px solid var(--rule); border-radius: 0.25rem; padding: 0.4rem; }
-  .controls label { max-width: 100%; min-width: 0; }
-  a { color: var(--ink); text-decoration: underline; text-underline-offset: 0.18em; }
-  a:hover { color: var(--sky-ink); }
-  main.wrap { padding-bottom: 2rem; }
-  .result-section { margin-bottom: 4rem; scroll-margin-top: 6rem; }
-  .section-heading { margin: 0 auto 2rem; text-align: center; }
-  .section-heading h2 { margin: 0; font-size: clamp(1.4rem, 2.4vw, 1.8rem); font-weight: 400; letter-spacing: -0.02em; }
-  .viewer-layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 1.75rem; align-items: start; }
+  :root { --s0: var(--gray-100); --s1: var(--gray-300); --s2: var(--gray-400); --s3: var(--gray-600); --s4: var(--gray-900); }
+  .tr-meta { margin: 8px 0 0; overflow-wrap: anywhere; }
+  .caption { font: 400 11px/17px var(--mono); color: var(--gray-600); overflow-wrap: anywhere; }
+  .tr-caption { overflow-wrap: anywhere; }
+  .tr-controls { display: flex; flex-wrap: wrap; gap: 10px 24px; margin-top: 16px; }
+  .tr-controls label { display: flex; align-items: center; gap: 8px; max-width: 100%; min-width: 0; }
+  .viewer-layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 28px; align-items: start; }
   .viewer-layout > *, .viewer { min-width: 0; }
-  .viewer { display: grid; gap: 0.5rem; }
+  .viewer { display: grid; gap: 8px; }
   .film { position: relative; background: var(--film); border-radius: 4px; overflow: hidden; }
   .film img { display: block; width: 100%; height: auto; }
   .film svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .film .empty { color: #97a3b2; padding: 3rem 1.5rem; }
-  .legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem; font-family: var(--sans); font-size: 0.78rem; color: var(--mute); }
-  .legend span, .legend label { display: inline-flex; align-items: center; gap: 0.4rem; }
-  .legend .sw { width: 16px; height: 10px; border: 2px solid; border-radius: 1px; }
-  .legend .cell { width: 12px; height: 12px; border-radius: 2px; }
-  .label { font-family: var(--sans); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mute); display: flex; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.5rem; }
+  .film .empty { color: var(--gray-400); padding: 48px 24px; font: 400 12px/18px var(--mono); }
+  .legend label { display: inline-flex; align-items: center; gap: 6px; }
+  .legend .cell { width: 12px; height: 12px; border-radius: 2px; border: 1px solid var(--gray-200); background: transparent; }
+  .tr-label { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
   .grid { display: flex; flex-wrap: wrap; gap: 3px; }
-  .cellbtn { width: 24px; height: 24px; border: 0; border-radius: 3px; padding: 0; cursor: pointer; }
-  .cellbtn:hover { outline: 2px solid var(--ink); }
-  .cellbtn.sel { outline: 2px solid var(--apricot-ink); }
-  .cellbtn:focus-visible { outline: 2px solid var(--sky-ink); }
-  .cellbtn.noreply { box-shadow: inset 0 0 0 1.5px var(--apricot-ink); }
-  .reply { margin: 0; padding: 1.1rem 1.25rem; background: var(--sky-wash); border-radius: 0.35rem; font-family: var(--mono); font-size: 0.78rem; line-height: 1.55; text-align: left; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 34rem; overflow: auto; }
-  details { margin: 0.8rem 0; min-width: 0; }
-  summary { cursor: pointer; font-family: var(--sans); font-size: 0.85rem; overflow-wrap: anywhere; }
-  .caption, .meta, .errors { overflow-wrap: anywhere; }
-  .errors { padding: 0.8rem 1rem; background: var(--apricot-wash); font-family: var(--sans); font-size: 0.85rem; }
-  .trace-images { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 1rem; }
-  .trace-images figure { margin: 1rem 0; min-width: 0; }
-  .trace-images img { display: block; max-width: 100%; height: auto; background: var(--film); }
-  .trace-images figcaption { overflow-wrap: anywhere; }
-  .scroll { max-width: 100%; overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; font-family: var(--sans); font-size: 0.78rem; }
-  th, td { padding: 0.6rem; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: top; }
-  th { font-weight: 400; color: var(--mute); }
-  td:last-child { min-width: 8rem; overflow-wrap: anywhere; }
-  a:focus-visible, summary:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--sky-ink); outline-offset: 3px; }
-  footer.wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0 1rem; padding-top: 1rem; padding-bottom: 2rem; border-top: 1px solid var(--rule); font-family: var(--sans); font-size: 0.75rem; color: var(--mute); }
+  .cellbtn { width: 24px; height: 24px; border: 1px solid var(--gray-200); border-radius: 3px; padding: 0; cursor: pointer; }
+  .cellbtn:hover { outline: 2px solid var(--gray-900); }
+  .cellbtn.sel { outline: 2px solid var(--anthropic); }
+  .cellbtn:focus-visible { outline: 2px solid var(--gray-900); }
+  .cellbtn.noreply { box-shadow: inset 0 0 0 1.5px var(--fail-ink); }
+  .reply { margin: 0; padding: 12px 14px; background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: 6px; font: 400 12px/18px var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 30rem; overflow: auto; }
+  .tr-details { margin: 0; min-width: 0; border-bottom: 1px solid var(--gray-100); padding: 8px 0; }
+  .tr-details > summary, #conversation summary { cursor: pointer; font: 400 12px/18px var(--mono); color: var(--gray-700); overflow-wrap: anywhere; }
+  .tr-details[open] > summary, #conversation details[open] > summary { margin-bottom: 8px; color: var(--gray-900); }
+  #conversation { margin-top: 12px; border-top: 1px solid var(--gray-100); }
+  #conversation details { margin: 0; min-width: 0; padding: 8px 0; border-bottom: 1px solid var(--gray-100); }
+  .tr-status { margin-top: 12px; font: 400 12px/18px var(--mono); color: var(--gray-700); overflow-wrap: anywhere; }
+  .tr-status p { margin: 0; }
+  .errors { margin: 6px 0 0; padding: 8px 12px; border: 1px solid var(--fail-edge); border-radius: 6px; background: var(--fail-wash); color: var(--fail-ink); font: 400 12px/18px var(--mono); overflow-wrap: anywhere; }
+  .trace-images { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 16px; }
+  .trace-images figure { margin: 12px 0; min-width: 0; }
+  .trace-images img { display: block; max-width: 100%; height: auto; background: var(--film); border-radius: 4px; }
+  .trace-images figcaption { margin-top: 4px; font: 400 10px/16px var(--mono); color: var(--gray-500); overflow-wrap: anywhere; }
+  #calls table td:last-child { min-width: 8rem; overflow-wrap: anywhere; }
+  #warnings { padding-left: 1.2rem; }
   @media (max-width: 900px) { .viewer-layout { grid-template-columns: 1fr; } }
-  @media (max-width: 600px) {
-    .wrap { width: calc(100% - 2rem); }
-    nav.top .wrap { width: calc(100% - 2rem); flex-wrap: wrap; padding: 1rem 0; gap: 0.85rem; }
-    header.hero { padding: 2rem 0 1.5rem; }
-  }
 </style>
 </head>
-<body class="results-page">
-<nav class="top">
-  <div class="wrap">
-    <a class="brand" href="./">PanoRead</a>
-    <span class="links"><a href="benchmark.html">Leaderboard</a><a href="./">Live run</a><a href="https://huggingface.co/datasets/tirandazdylan/periapical-lesions-pai">Data</a><a href="https://github.com/dylantirandaz/dental-environments">Benchmark</a></span>
-  </div>
-</nav>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header"><div class="container">
+  <a class="brand" href="benchmark.html"><b>PanoRead</b><span>.periapical</span></a>
+  <nav class="site-nav" aria-label="Site"><a href="benchmark.html">Leaderboard</a><a href="traces.html" aria-current="page">Traces</a><a href="./">Live run</a><a class="optional" href="https://huggingface.co/datasets/tirandazdylan/periapical-lesions-pai">Data</a><a class="optional" href="https://github.com/dylantirandaz/dental-environments">Benchmark</a></nav>
+</div></header>
 
-<header class="hero">
-  <div class="wrap">
-    <h1>Traces</h1>
-    <p class="meta" id="run-meta" role="status">Loading benchmark data…</p>
-    <div class="controls">
-      <label>Model <select id="run-select" disabled></select></label>
-      <label>Case <select id="case-select" disabled></select></label>
-    </div>
-    <p class="caption">Agent benchmark only. <a href="./">Separate RL dashboard</a>.</p>
-    <details><summary>Run data and protocol</summary><pre class="reply" id="run-data"></pre></details>
-  </div>
-</header>
+<main id="main" class="container">
 
-<main class="wrap">
+<h1 class="title">Traces</h1>
+<p class="mono-note tr-meta" id="run-meta" role="status">Loading benchmark data…</p>
+<div class="tr-controls">
+  <label class="eyebrow">Model <select class="field" id="run-select" disabled></select></label>
+  <label class="eyebrow">Case <select class="field" id="case-select" disabled></select></label>
+</div>
+<p class="note tr-caption">Agent benchmark only. <a href="./">Separate RL dashboard</a>.</p>
+<details class="tr-details"><summary>Run data and protocol</summary><pre class="reply" id="run-data"></pre></details>
 
-<section class="result-section" aria-label="Film viewer">
+<section class="block" aria-label="Film viewer">
   <div class="viewer-layout">
     <div class="viewer">
       <div class="film" id="film"><div class="empty">Loading…</div></div>
-      <div class="caption" id="caption"></div>
+      <div class="mono-note tr-caption" id="caption"></div>
       <div class="legend">
-        <label><input id="show-dentists" type="checkbox" checked><i class="sw" style="border-color:#73bfff"></i>dentists</label>
-        <label><input id="show-model" type="checkbox" checked><i class="sw" style="border-color:#ffbd73"></i>model</label>
+        <label><input id="show-dentists" type="checkbox" checked><i class="box" style="--dot:var(--box-dentist)"></i>dentists</label>
+        <label><input id="show-model" type="checkbox" checked><i class="box" style="--dot:var(--box-model)"></i>model</label>
       </div>
     </div>
     <div>
-      <div class="label"><span>Films</span><span id="grid-note"></span></div>
+      <div class="eyebrow tr-label"><span>Films</span><span id="grid-note"></span></div>
       <div class="grid" id="grid"></div>
-      <div class="legend" style="margin-top:0.6rem">
+      <div class="legend" style="margin-top:10px">
         <span>score</span>
         <span><i class="cell" style="background:var(--s0)"></i>0</span>
         <span><i class="cell" style="background:var(--s2)"></i>0.5</span>
         <span><i class="cell" style="background:var(--s4)"></i>1</span>
-        <span><i class="cell" style="box-shadow:inset 0 0 0 1.5px var(--apricot-ink)"></i>error / unscored</span>
+        <span><i class="cell" style="box-shadow:inset 0 0 0 1.5px var(--fail-ink)"></i>error / unscored</span>
       </div>
     </div>
   </div>
 </section>
 
-<section class="result-section" id="case-section" hidden aria-labelledby="case-title">
-  <div class="section-heading"><h2 id="case-title">Case trace</h2></div>
-  <div class="errors" id="case-status" role="status"></div>
-  <p class="caption" id="thinking-note"></p>
-  <p class="caption"><a id="trace-download" hidden download>Download public trace JSON</a></p>
-  <details id="thinking-section" hidden>
+<section class="block" id="case-section" hidden aria-labelledby="case-title">
+  <h2 class="section-title" id="case-title">Case trace</h2>
+  <div class="tr-status" id="case-status" role="status"></div>
+  <p class="note" id="thinking-note"></p>
+  <p class="note"><a id="trace-download" hidden download>Download public trace JSON</a></p>
+  <details class="tr-details" id="thinking-section" hidden>
     <summary>Returned thinking</summary>
     <pre class="reply" id="thinking"></pre>
   </details>
-  <details>
+  <details class="tr-details">
     <summary>Selected attempt final reply</summary>
     <pre class="reply" id="reply"></pre>
   </details>
-  <p class="caption" id="trace-status" role="status"></p>
-  <div class="controls" id="attempt-control" hidden>
-    <label>Attempt <select id="attempt-select"></select></label>
+  <p class="note" id="trace-status" role="status"></p>
+  <div class="tr-controls" id="attempt-control" hidden>
+    <label class="eyebrow">Attempt <select class="field" id="attempt-select"></select></label>
   </div>
-  <div class="errors" id="attempt-status" hidden></div>
-  <details id="warnings-section" hidden>
+  <div class="tr-status" id="attempt-status" hidden></div>
+  <details class="tr-details" id="warnings-section" hidden>
     <summary id="warnings-title"></summary>
-    <ul class="caption" id="warnings"></ul>
+    <ul class="note" id="warnings"></ul>
   </details>
-  <details id="tools-section" hidden>
+  <details class="tr-details" id="tools-section" hidden>
     <summary>Tool definitions</summary>
     <pre class="reply" id="tools">Open to load tool definitions.</pre>
   </details>
-  <details id="calls-section" hidden>
+  <details class="tr-details" id="calls-section" hidden>
     <summary>Model calls</summary>
     <div class="scroll" id="calls"></div>
   </details>
-  <h3>Public conversation</h3>
-  <p class="caption">Message order is preserved. Open each message for its full public fields and images. Private or encrypted reasoning is not public.</p>
+  <h3 class="section-title" style="margin-top:28px">Public conversation</h3>
+  <p class="section-sub">Message order is preserved. Open each message for its full public fields and images. Private or encrypted reasoning is not public.</p>
   <div id="conversation"></div>
 </section>
-<noscript><p>Enable JavaScript to view benchmark traces. <a href="data/benchmarks.json">Read the benchmark index</a>.</p></noscript>
+<noscript><p class="note">Enable JavaScript to view benchmark traces. <a href="data/benchmarks.json">Read the benchmark index</a>.</p></noscript>
 
 </main>
 
-<footer class="wrap">
-  <p>PanoRead · 2026-09-30</p>
-  <p><a href="benchmark.html">Leaderboard</a> · <a href="https://github.com/dylantirandaz/periapical-rl">Source</a></p>
-</footer>
+<footer class="site-footer"><div class="container">
+  <div>
+    <a class="brand" href="benchmark.html"><b>PanoRead</b><span>.periapical</span></a>
+    <p class="footer-label">Pages</p>
+    <ul class="footer-links"><li><a href="benchmark.html">Leaderboard</a></li><li><a href="traces.html">Agent traces</a></li><li><a href="./">Live training run</a></li></ul>
+    <p class="footer-label">Source</p>
+    <ul class="footer-links"><li><a href="https://github.com/dylantirandaz/dental-environments">dental-environments</a> <span class="sep">·</span> <a href="https://github.com/dylantirandaz/periapical-rl">periapical-rl</a> <span class="sep">·</span> <a href="https://huggingface.co/datasets/tirandazdylan/periapical-lesions-pai">Dataset</a></li></ul>
+  </div>
+  <div class="footer-aside">
+    <h4>Data</h4><p>Films: Do et al. 2024, CC BY 4.0. Labels and splits come from the Hugging Face dataset.</p>
+    <h4>Colophon</h4><p>Iowan Old Style and JetBrains Mono. Layout after benchmarks.bio. Numbers come from <code>data/</code> in the public repo.</p>
+  </div>
+</div></footer>
 
 <script>
 (() => {
@@ -308,7 +259,7 @@
       $("calls").append(el("p", { class: "caption" }, "No model calls recorded."));
       return;
     }
-    const table = el("table"), head = el("thead"), heading = el("tr"), body = el("tbody");
+    const table = el("table", { class: "data" }), head = el("thead"), heading = el("tr"), body = el("tbody");
     for (const label of ["Index", "Finish reason", "Prompt tokens", "Completion tokens", "Cached tokens", "Seconds", "Error"]) {
       heading.append(el("th", { scope: "col" }, label));
     }
@@ -461,8 +412,8 @@
     dentistLayer = svgEl("g", {});
     modelLayer = svgEl("g", {});
     const lesions = Array.isArray(film.lesions) ? film.lesions : [];
-    drawBoxes(dentistLayer, film.boxes || [], "#73bfff", false);
-    drawBoxes(modelLayer, lesions.map((lesion) => lesion.box), "#ffbd73", true);
+    drawBoxes(dentistLayer, film.boxes || [], "var(--box-dentist)", false);
+    drawBoxes(modelLayer, lesions.map((lesion) => lesion.box), "var(--box-model)", true);
     svg.append(dentistLayer, modelLayer);
     const path = localPath(film.image_path, true) || localPath(`films/${encodeURIComponent(film.film)}.jpg`, true);
     if (path) {
@@ -574,6 +525,7 @@
     clearCases("Cannot load benchmark data. No RL fallback is used.");
   });
 })();
+  (() => { const header = document.querySelector(".site-header"); const update = () => header.toggleAttribute("data-scrolled", window.scrollY > 4); addEventListener("scroll", update, { passive: true }); update(); })();
 </script>
 </body>
 </html>

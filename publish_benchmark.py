@@ -120,6 +120,11 @@ class RunConfig:
             "http", "127.0.0.1:18081", "/api/v1"
         ):
             route = "Prime Inference through gemini_gateway_adapter.py"
+        elif (endpoint.scheme, endpoint.netloc, endpoint.path.rstrip("/")) == (
+            "http", "127.0.0.1:18082", "/api/v1"
+        ):
+            # Early films of a resumed run may have used Prime Inference directly. The limiter changes no request or response.
+            route = "Prime Inference, partly through uplink_limiter_adapter.py (upload rate cap, no content change)"
         else:
             raise ValueError("Unknown inference route in resolved client.base_url")
         retries = obj(env.get("retries", {"max_retries": 0, "include": []}), "env.retries")
@@ -549,12 +554,30 @@ def film_row(key: str, records: list[tuple[int, Object]], config: RunConfig,
             "image_path": next(iter(sorted(prompt_images)), None), "attempts": attempts}
 
 
+def mean_interval(values: list[float], z: float = 1.96) -> list[float]:
+    """95% interval for the mean reward over films (normal approximation), kept inside 0 to 1."""
+    count = len(values)
+    mean = sum(values) / count
+    spread = math.sqrt(sum((v - mean) ** 2 for v in values) / (count - 1) / count) if count > 1 else 0.0
+    return [max(0.0, mean - z * spread), min(1.0, mean + z * spread)]
+
+
+def wilson_interval(successes: int, total: int, z: float = 1.96) -> list[float]:
+    """95% Wilson interval for a share of films. It stays inside 0 to 1 and is sensible near 0."""
+    share = successes / total
+    denominator = 1 + z * z / total
+    centre = (share + z * z / (2 * total)) / denominator
+    half = z * math.sqrt(share * (1 - share) / total + z * z / (4 * total * total)) / denominator
+    return [max(0.0, centre - half), min(1.0, centre + half)]
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("run_dir", type=Path)
     parser.add_argument("--label", required=True, help="Short display name; not a model override")
+    parser.add_argument("--config", type=Path, help="Resolved config to publish with. Default: <run_dir>/configs/resolved/eval.json")
     args = parser.parse_args()
-    resolved = obj(load(args.run_dir / "configs" / "resolved" / "eval.json"), "resolved config")
+    resolved = obj(load(args.config or args.run_dir / "configs" / "resolved" / "eval.json"), "resolved config")
     config = RunConfig.load(resolved)
     run_id = slug(config.model, config.harness)
     directory = SITE / "data" / run_id
@@ -597,7 +620,12 @@ def main() -> None:
                      "turn_limit_stops": sum(film["stop_condition"] == "max_turns" for film in films),
                      "route": config.route, "retries": config.retries,
                      "selection_policy": "Latest recorded attempt for each stable task identity",
-                     "full_test_split": config.expected == TEST_CASES}
+                     "full_test_split": config.expected == TEST_CASES,
+                     "mean_reward_ci95": mean_interval(rewards) if complete else None,
+                     "pass_rate_ci95": wilson_interval(pass_count, config.expected) if complete else None,
+                     "outcomes": {"pass": pass_count, "partial": sum(0 < reward < 1 for reward in rewards),
+                                  "zero": sum(reward == 0 for reward in rewards)} if complete else None,
+                     "avg_model_calls": sum(film["model_calls"] for film in films) / attempted if complete else None}
     dump(directory / "evals" / "test_0000.json", films)
     dump(directory / "summary.json", {**entry, "stage": "benchmark", "eval_views": ["test_0000"]})
     index_path = SITE / "data" / "benchmarks.json"

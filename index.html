@@ -6,83 +6,73 @@
 <title>Live Training Run · PanoRead</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap">
+<link rel="stylesheet" href="site.css">
 <style>
   :root {
-    --ink: #222725; --mute: #5e6562; --rule: #dce4df; --band: #f4f8f5; --paper: #ffffff;
-    --mint: #98e6c5; --mint-ink: #216954; --pink: #f3c5e5; --pink-ink: #ad358b;
-    --film: #0b0e0d; --box-dentist: #6fe0b4; --box-agent: #ff7ccf;
-    --s0: #eef3f0; --s1: #cfeede; --s2: #98e6c5; --s3: #4fb48d; --s4: #216954;
-    --serif: "Source Serif 4", Georgia, serif; --sans: Arial, Helvetica, sans-serif;
+    /* Aliases read by the chart script. */
+    --ink: var(--gray-900); --mint-ink: var(--gray-900); --pink-ink: var(--thinking-machines);
+    --rule: var(--gray-200); --paper: #fff;
+    /* Score ramp for grid cells. */
+    --s0: var(--gray-100); --s1: var(--gray-300); --s2: var(--gray-400); --s3: var(--gray-600); --s4: var(--gray-900);
   }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 14px; padding-inline: 24px; padding-block: 0 48px; }
-  .wrap { max-width: 1320px; margin: 0 auto; }
-  nav { display: flex; justify-content: space-between; align-items: center; padding-block: 18px; border-bottom: 1px solid var(--rule); }
-  nav .brand { font-family: var(--serif); font-size: 1.4rem; font-style: italic; font-weight: 600; text-decoration: none; color: var(--ink); }
-  nav .links { display: flex; gap: 22px; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; }
-  nav .links a { color: var(--mute); text-decoration: none; }
-  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 22px; padding-block: 22px 14px; }
-  h1 { font-family: var(--serif); font-weight: 400; font-size: 1.9rem; margin: 0; }
-  .status { display: inline-flex; align-items: center; gap: 6px; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute); }
-  .status i { width: 8px; height: 8px; border-radius: 50%; background: var(--mute); }
-  .status.live i { background: #d6334a; animation: pulse 1.6s infinite; }
-  .status.live { color: #d6334a; }
+  .statusline { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; margin-top: 10px; }
+  .status { display: inline-flex; align-items: center; gap: 6px; font: 400 11px/16px var(--mono); letter-spacing: 0.05em; text-transform: uppercase; color: var(--gray-600); }
+  .status i { width: 7px; height: 7px; border-radius: 50%; background: var(--gray-400); }
+  .status.live { color: var(--fail-ink); }
+  .status.live i { background: var(--fail-ink); animation: pulse 1.6s infinite; }
   @keyframes pulse { 50% { opacity: 0.35; } }
   @media (prefers-reduced-motion: reduce) { .status.live i { animation: none; } }
-  .meta { color: var(--mute); font-size: 0.85rem; display: flex; flex-wrap: wrap; gap: 4px 18px; }
-  .about { color: var(--mute); max-width: 76ch; margin: 0 0 18px; line-height: 1.5; }
-  .top { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .meta { display: flex; flex-wrap: wrap; gap: 2px 18px; font: 400 11px/16px var(--mono); color: var(--gray-500); }
+  .top { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 24px; align-items: start; margin-top: 28px; }
   .viewer { display: grid; gap: 8px; }
-  .film { position: relative; background: var(--film); border-radius: 4px; overflow: hidden; }
+  .film { position: relative; background: var(--film); border-radius: 8px; overflow: hidden; }
   .film img { display: block; width: 100%; height: auto; }
   .film svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .caption { color: var(--mute); font-size: 0.85rem; min-height: 1.3em; }
-  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.78rem; color: var(--mute); }
-  .legend span { display: inline-flex; align-items: center; gap: 6px; }
-  .legend .sw { width: 16px; height: 10px; border: 2px solid; border-radius: 1px; }
+  .caption { font: 400 11px/16px var(--mono); color: var(--gray-600); min-height: 1.3em; overflow-wrap: anywhere; }
+  .legend .sw { width: 16px; height: 10px; border: 2px solid; border-radius: 1px; background: transparent; }
   .legend .cell { width: 12px; height: 12px; border-radius: 2px; }
-  .label { font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute); display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+  .label { margin: 0 0 8px; display: flex; justify-content: space-between; gap: 12px; font: 400 11px/16.5px var(--mono); letter-spacing: 0.05em; text-transform: uppercase; color: var(--gray-600); }
   .grid { display: grid; gap: 4px; }
   .row { display: grid; grid-template-columns: 5.2rem repeat(8, minmax(0, 1fr)); gap: 4px; align-items: center; }
-  .row .name { font-size: 0.78rem; color: var(--mute); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row .name { font: 400 10px/16px var(--mono); color: var(--gray-500); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .evalgrid { display: flex; flex-wrap: wrap; gap: 3px; }
   .evalgrid .cellbtn { width: 15px; height: 15px; }
   .cellbtn { height: 22px; border: 0; border-radius: 3px; padding: 0; cursor: pointer; }
-  .cellbtn:hover { outline: 2px solid var(--ink); }
-  .cellbtn.sel { outline: 2px solid var(--pink-ink); }
-  .cellbtn.unparsed { background: var(--paper) !important; box-shadow: inset 0 0 0 1.5px var(--pink-ink); }
-  .cellbtn.pending { background: repeating-linear-gradient(45deg, var(--band), var(--band) 4px, var(--paper) 4px, var(--paper) 8px); cursor: default; }
-  .cellbtn:focus-visible { outline: 2px solid var(--mint-ink); }
-  section { margin-top: 30px; padding-top: 18px; border-top: 1px solid var(--rule); }
-  .chart { width: 100%; height: auto; display: block; overflow: visible; }
-  .chart text { font-size: 11px; fill: var(--mute); font-family: var(--sans); }
+  .cellbtn:hover { outline: 2px solid var(--gray-900); }
+  .cellbtn.sel { outline: 2px solid var(--anthropic); }
+  .cellbtn.unparsed { background: #fff !important; box-shadow: inset 0 0 0 1.5px var(--fail-ink); }
+  .cellbtn.pending { background: repeating-linear-gradient(45deg, var(--gray-200), var(--gray-200) 4px, #fff 4px, #fff 8px); cursor: default; }
+  .cellbtn:focus-visible { outline: 2px solid var(--gray-900); }
+  .chart { width: 100%; height: auto; display: block; overflow: visible; margin-top: 8px; }
+  .chart text { font: 400 10px var(--mono); fill: var(--gray-500); }
   .chart .hit { cursor: pointer; }
-  .tip { position: fixed; pointer-events: none; background: var(--ink); color: var(--paper); font-size: 12px; padding: 6px 8px; border-radius: 4px; white-space: nowrap; }
-  .runs { display: grid; gap: 8px; }
-  .run { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 10px 12px; border: 1px solid var(--rule); border-radius: 4px; text-decoration: none; color: var(--ink); }
-  .run:hover { background: var(--band); }
-  .run.current { border-color: var(--mint); background: #f8fcfa; }
-  .run small { color: var(--mute); }
-  .empty { color: var(--mute); padding: 24px 0; }
-  .film .empty { color: #c9cfcb; padding: 28px 18px; }
+  .tip { position: fixed; z-index: 40; pointer-events: none; background: var(--gray-900); color: #fff; font: 400 11px/16px var(--mono); padding: 6px 8px; border-radius: 4px; white-space: nowrap; }
+  .runs { display: grid; gap: 10px; }
+  .run { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 12px 16px; border: 1px solid var(--gray-200); border-radius: 8px; text-decoration: none; color: var(--gray-900); font: 400 12px/18px var(--mono); }
+  .run:hover { border-color: var(--gray-400); }
+  .run.current { border-color: var(--gray-900); }
+  .run small { font: 400 10px/16px var(--mono); color: var(--gray-500); }
+  .empty { font: 400 12px/18px var(--mono); color: var(--gray-500); padding: 24px 0; }
+  .film .empty { color: var(--gray-300); padding: 28px 18px; }
   @media (max-width: 900px) { .top { grid-template-columns: 1fr; } }
-  @media (max-width: 520px) { body { padding-inline: 16px; } .row { grid-template-columns: 3.8rem repeat(8, minmax(0, 1fr)); } }
+  @media (max-width: 520px) { .row { grid-template-columns: 3.8rem repeat(8, minmax(0, 1fr)); } }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <nav>
-    <a class="brand" href="./">PanoRead</a>
-    <div class="links"><a href="benchmark.html">Benchmark</a><a href="#chart">Score</a><a href="#runs">Runs</a></div>
-  </nav>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header"><div class="container">
+  <a class="brand" href="benchmark.html"><b>PanoRead</b><span>.periapical</span></a>
+  <nav class="site-nav" aria-label="Site"><a href="benchmark.html">Leaderboard</a><a href="traces.html">Traces</a><a href="./" aria-current="page">Live run</a><a class="optional" href="https://huggingface.co/datasets/tirandazdylan/periapical-lesions-pai">Data</a><a class="optional" href="https://github.com/dylantirandaz/dental-environments">Benchmark</a></nav>
+</div></header>
 
-  <header>
-    <h1>Live Training Run</h1>
+<main id="main" class="container">
+  <h1 class="title">Live Training Run</h1>
+  <div class="statusline">
     <span class="status" id="status"><i></i><span id="status-text">Loading</span></span>
     <div class="meta" id="meta"></div>
-  </header>
-  <p class="about">Inkling is learning to find infections at the tips of tooth roots on dental X-rays and rate how severe they are, in two stages. First it is fine-tuned on 2,587 X-rays the dentists labelled; then reinforcement learning practises on 500 X-rays it has not seen, 16 at a time, 8 tries each. The benchmark score is 1.0 only when every box overlaps the dentists' box and every severity matches (half boxes, half severities). Progress is measured on 389 validation X-rays; the 387 test X-rays are scored once, at the end. Dentists checked against each other score 0.84.</p>
+  </div>
+  <p class="lede">Inkling is learning to find infections at the tips of tooth roots on dental X-rays and rate how severe they are, in two stages. First it is fine-tuned on 2,587 X-rays the dentists labelled; then reinforcement learning practises on 500 X-rays it has not seen, 16 at a time, 8 tries each. The benchmark score is 1.0 only when every box overlaps the dentists' box and every severity matches (half boxes, half severities). Progress is measured on 389 validation X-rays; the 387 test X-rays are scored once, at the end. Dentists checked against each other score 0.84.</p>
 
   <div class="top">
     <div class="viewer">
@@ -90,7 +80,7 @@
       <div class="caption" id="caption"></div>
       <div class="legend">
         <span><i class="sw" style="border-color:var(--box-dentist)"></i>dentists</span>
-        <span><i class="sw" style="border-color:var(--box-agent)"></i>Inkling</span>
+        <span><i class="sw" style="border-color:var(--box-model)"></i>Inkling</span>
       </div>
     </div>
     <div>
@@ -100,25 +90,38 @@
         <span id="cell-legend">score</span><span><i class="cell" style="background:var(--s0)"></i>0</span>
         <span><i class="cell" style="background:var(--s2)"></i>0.5</span>
         <span><i class="cell" style="background:var(--s4)"></i>1.0</span>
-        <span><i class="cell" style="box-shadow:inset 0 0 0 1.5px var(--pink-ink)"></i>unreadable answer</span>
-        <span><i class="cell" style="background:repeating-linear-gradient(45deg,var(--band),var(--band) 3px,var(--paper) 3px,var(--paper) 6px)"></i>still running</span>
+        <span><i class="cell" style="box-shadow:inset 0 0 0 1.5px var(--fail-ink)"></i>unreadable answer</span>
+        <span><i class="cell" style="background:repeating-linear-gradient(45deg,var(--gray-200),var(--gray-200) 3px,#fff 3px,#fff 6px)"></i>still running</span>
       </div>
     </div>
   </div>
 
-  <section id="chart">
+  <section class="block" id="chart">
     <div class="label"><span>Score</span><span id="chart-note"></span></div>
     <svg class="chart" id="chart-svg" viewBox="0 0 1000 240" role="img" aria-label="Scores over training steps"></svg>
     <div class="legend" style="margin-top:8px" id="chart-legend"></div>
   </section>
 
-  <section id="runs">
+  <section class="block" id="runs">
     <div class="label"><span>Runs</span></div>
     <div class="runs" id="run-list"></div>
   </section>
-</div>
+</main>
 <div class="tip" id="tip" hidden></div>
 
+<footer class="site-footer"><div class="container">
+  <div>
+    <a class="brand" href="benchmark.html"><b>PanoRead</b><span>.periapical</span></a>
+    <p class="footer-label">Pages</p>
+    <ul class="footer-links"><li><a href="benchmark.html">Leaderboard</a></li><li><a href="traces.html">Agent traces</a></li><li><a href="./">Live training run</a></li></ul>
+    <p class="footer-label">Source</p>
+    <ul class="footer-links"><li><a href="https://github.com/dylantirandaz/dental-environments">dental-environments</a> <span class="sep">·</span> <a href="https://github.com/dylantirandaz/periapical-rl">periapical-rl</a> <span class="sep">·</span> <a href="https://huggingface.co/datasets/tirandazdylan/periapical-lesions-pai">Dataset</a></li></ul>
+  </div>
+  <div class="footer-aside">
+    <h4>Data</h4><p>Films: Do et al. 2024, CC BY 4.0. Labels and splits come from the Hugging Face dataset.</p>
+    <h4>Colophon</h4><p>Iowan Old Style and JetBrains Mono. Layout after benchmarks.bio. Numbers come from <code>data/</code> in the public repo.</p>
+  </div>
+</div></footer>
 <script>
 (() => {
   const POLL_MS = 30000;
@@ -177,7 +180,7 @@
       x: x0, y: y0, width: Math.max(0, x1 - x0), height: Math.max(0, y1 - y0), fill: "none", stroke: color,
       "stroke-width": width, "vector-effect": "non-scaling-stroke" })));
     draw(film.boxes, "var(--box-dentist)", 3);
-    if (answer) draw(answer.lesions.map((l) => l.box), "var(--box-agent)", 2.5);
+    if (answer) draw(answer.lesions.map((l) => l.box), "var(--box-model)", 2.5);
     box.append(el("img", { src: `films/${film.film}.jpg`, alt: `Dental X-ray ${film.film}` }), svg);
     const grades = film.pai.map((p) => `PAI ${p}`).join(", ");
     const said = answer.parsed ? answer.lesions.map((l) => `PAI ${l.pai}`).join(", ") || "no lesions" : "answer could not be read";
@@ -350,5 +353,6 @@
   setInterval(refresh, POLL_MS);
 })();
 </script>
+<script>(() => { const header = document.querySelector(".site-header"); const update = () => header.toggleAttribute("data-scrolled", window.scrollY > 4); addEventListener("scroll", update, { passive: true }); update(); })();</script>
 </body>
 </html>
