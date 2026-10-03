@@ -48,6 +48,8 @@ PRIVATE_KEY = re.compile(
     r"encrypted|signature|credential|private[_-]?key|signed[_-]?url|^token$|^key$", re.I
 )
 URL = re.compile(r"https?://[^\s<>\"']+", re.I)
+# Tunnel hostnames are per-run infrastructure. Cloudflare timeout errors print them as bare values, not URLs.
+TUNNEL_HOST = re.compile(r"\b[a-z0-9-]+\.tunnel\.pinfra\.io\b", re.I)
 DATA_IMAGE = re.compile(r"data:image/[a-z0-9.+-]+;base64,[a-z0-9+/=\r\n]+", re.I)
 # A tool result can print a harness log. Encrypted reasoning in it is text, not a message field.
 ENCRYPTED_REASONING = re.compile(r"((?:redacted_thinking\W{1,8}data|encrypted_content)\W{1,8})[A-Za-z0-9+/=_-]{24,}")
@@ -120,11 +122,6 @@ class RunConfig:
             "http", "127.0.0.1:18081", "/api/v1"
         ):
             route = "Prime Inference through gemini_gateway_adapter.py"
-        elif (endpoint.scheme, endpoint.netloc, endpoint.path.rstrip("/")) == (
-            "http", "127.0.0.1:18082", "/api/v1"
-        ):
-            # Early films of a resumed run may have used Prime Inference directly. The limiter changes no request or response.
-            route = "Prime Inference, partly through uplink_limiter_adapter.py (upload rate cap, no content change)"
         else:
             raise ValueError("Unknown inference route in resolved client.base_url")
         retries = obj(env.get("retries", {"max_retries": 0, "include": []}), "env.retries")
@@ -283,7 +280,7 @@ class PublicTrace:
                 return "[private URL removed]"
             return url
 
-        return URL.sub(safe_url, source)
+        return TUNNEL_HOST.sub("[private host removed]", URL.sub(safe_url, source))
 
     def clean(self, source: Json) -> Json:
         if isinstance(source, str):
