@@ -23,10 +23,10 @@
   --openai: #ececec; --anthropic: #e08a6b; --google: #6cc08f; --spacexai: #d9b872;
   --deepseek: #7fa1ee; --zai: #9ba4b6; --thinking-machines: #b497dc; --other-provider: #7c7c80;
 
-  /* Outcomes: pass, partial credit, zero. */
-  --pass-ink: #6ee0a8; --pass-wash: rgba(52, 211, 153, 0.10); --pass-edge: rgba(52, 211, 153, 0.35); --pass-bar: #5fb88d;
-  --mid-ink: #e7b45a; --mid-wash: rgba(245, 158, 11, 0.10); --mid-edge: rgba(245, 158, 11, 0.35); --mid-bar: #c9a35e;
-  --fail-ink: #f08a8a; --fail-wash: rgba(239, 68, 68, 0.10); --fail-edge: rgba(239, 68, 68, 0.35); --fail-bar: #3b3d3e;
+  /* Colours for a film's reward in the hero label: 1, between 0 and 1, and 0. */
+  --pass-ink: #6ee0a8; --pass-wash: rgba(52, 211, 153, 0.10); --pass-edge: rgba(52, 211, 153, 0.35);
+  --mid-ink: #e7b45a; --mid-wash: rgba(245, 158, 11, 0.10); --mid-edge: rgba(245, 158, 11, 0.35);
+  --fail-ink: #f08a8a; --fail-wash: rgba(239, 68, 68, 0.10); --fail-edge: rgba(239, 68, 68, 0.35);
 
   /* Boxes drawn on radiographs: dentists and model. */
   --box-dentist: #8fc7ff; --box-model: #ffae6b; --film: #000;
@@ -80,10 +80,6 @@ section.block { margin-top: 72px; padding-top: 40px; border-top: 1px solid var(-
 
 /* Controls */
 .pill { display: inline-flex; align-items: center; gap: 0.4rem; padding: 2px 12px; border: 1px solid var(--line-strong); border-radius: 999px; font: 400 12px/18px var(--mono); color: var(--ink-soft); background: transparent; }
-.seg { display: inline-flex; padding: 2px; border: 1px solid var(--line); border-radius: 8px; background: transparent; }
-.seg button { padding: 3px 12px; border: 0; border-radius: 6px; background: transparent; font: 400 12px/18px var(--mono); color: var(--muted-2); cursor: pointer; }
-.seg button:hover { color: var(--ink-strong); }
-.seg button[aria-pressed="true"] { background: var(--surface-2); color: var(--ink-strong); }
 select.field { max-width: 100%; padding: 3px 28px 3px 10px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--surface); font: 400 12px/18px var(--mono); color: var(--ink); }
 .chip { display: inline-block; padding: 0 6px; border: 1px solid var(--line); border-radius: 4px; font: 400 10px/16px var(--mono); color: var(--muted); white-space: nowrap; }
 .status-pill { display: inline-block; padding: 1px 10px; border: 1px solid; border-radius: 999px; font: 400 10px/16px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }

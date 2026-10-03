@@ -15,7 +15,6 @@
 <link rel="stylesheet" href="site.css">
 <style>
   /* Leaderboard bars. Columns: value, plot, label. The plot overlay lines up with the middle column. */
-  .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; margin-top: 22px; }
   .bars { --value-col: 56px; --label-col: 180px; margin-top: 30px; }
   .bars-rows { position: relative; }
   .plot { position: absolute; inset: 0 var(--label-col) 0 var(--value-col); pointer-events: none; border-right: 1px solid var(--line); }
@@ -26,11 +25,6 @@
   .bar-value { font: 400 12px/16px var(--mono); color: var(--provider, var(--ink)); font-variant-numeric: tabular-nums; }
   .bar-track { position: relative; display: flex; align-items: center; height: 26px; }
   .bar-fill { display: block; height: 10px; min-width: 2px; border-radius: 999px; background: var(--provider, var(--faint)); }
-  .bar-segments { display: flex; width: 100%; height: 10px; overflow: hidden; border-radius: 999px; background: var(--surface-2); }
-  .bar-segments span { display: block; height: 100%; }
-  .bar-segments .pass { background: var(--pass-bar); }
-  .bar-segments .partial { background: var(--mid-bar); }
-  .bar-segments .zero { background: var(--fail-bar); }
   .whisker { position: absolute; top: 50%; height: 0; border-top: 1px solid var(--muted); }
   .whisker::before, .whisker::after { content: ""; position: absolute; top: -3px; height: 6px; border-left: 1px solid var(--muted); }
   .whisker::before { left: 0; }
@@ -103,16 +97,10 @@
 
   <section class="block" id="leaderboard" aria-labelledby="leaderboard-title" style="margin-top: 28px;">
     <h2 class="section-title" id="leaderboard-title">Leaderboard</h2>
-    <p class="section-sub" id="view-sub"></p>
-    <div class="toolbar">
-      <div class="seg" role="group" aria-label="Chart view">
-        <button type="button" data-view="reward" aria-pressed="true">Mean reward</button>
-        <button type="button" data-view="pass" aria-pressed="false">Pass rate</button>
-      </div>
-    </div>
+    <p class="section-sub">Score per film from 0 to 1, averaged over 200 films. Partial credit counts. Whiskers: 95% interval.</p>
     <div class="bars" id="bars" aria-live="polite">
       <div class="bars-rows" id="bars-rows" role="list"></div>
-      <div class="axis" aria-hidden="true"><div></div><div class="ticks" id="axis-ticks"><span style="left:0%"></span><span style="left:25%"></span><span style="left:50%"></span><span style="left:75%"></span><span style="left:100%"></span></div><div></div></div>
+      <div class="axis" aria-hidden="true"><div></div><div class="ticks"><span style="left:0%">0</span><span style="left:25%">0.25</span><span style="left:50%">0.5</span><span style="left:75%">0.75</span><span style="left:100%">1</span></div><div></div></div>
     </div>
     <div class="bars-foot">
       <span class="mono-note" id="bars-count">Loading…</span>
@@ -138,8 +126,8 @@
       <div style="min-width:0;">
         <p class="eyebrow">Test split · 387 films</p>
         <div class="scroll" style="margin-top:8px;"><table class="data">
-          <thead><tr><th>Checkpoint</th><th class="num">Reward</th><th class="num">Pass %</th></tr></thead>
-          <tbody><tr><td>fine-tuned</td><td class="num">0.12</td><td class="num">2.3</td></tr><tr><td>+ RL, step 50</td><td class="num">0.18</td><td class="num">3.1</td></tr></tbody>
+          <thead><tr><th>Checkpoint</th><th class="num">Reward</th></tr></thead>
+          <tbody><tr><td>fine-tuned</td><td class="num">0.12</td></tr><tr><td>+ RL, step 50</td><td class="num">0.18</td></tr></tbody>
         </table></div>
         <p class="mono-note" style="margin-top:12px;">+0.06 reward · 95% interval 0.03 to 0.08</p>
       </div>
@@ -150,8 +138,8 @@
     <h2 class="section-title" id="method-title">Method</h2>
     <dl class="kv" style="margin-top: 22px;">
       <dt>Task</dt><dd>Find each lesion, box it, grade it PAI 3, 4 or 5.</dd>
-      <dt>Score</dt><dd>½ lesion F1 + ½ graded F1. Boxes match at IoU ≥ 0.3. Extra boxes cost.</dd>
-      <dt>Pass</dt><dd>A film with reward exactly 1. Two dentists scoring each other: reward 0.83, pass 61%.</dd>
+      <dt>Score</dt><dd>Per film, ½ lesion F1 + ½ graded F1, so 0 to 1. Boxes match at IoU ≥ 0.3. Extra boxes cost.</dd>
+      <dt>Average</dt><dd>The leaderboard shows the mean over 200 films. Two dentists scoring each other: 0.83.</dd>
       <dt>Agents</dt><dd>Codex 0.147.0 and Claude Code 2.1.280. Python and image tools, 50 turns, no network.</dd>
       <dt>Films</dt><dd>First 200 of 387 test films. One scored attempt each.</dd>
       <dt>Re-runs</dt><dd>Sandbox and network faults are re-run. The turn limit is not.</dd>
@@ -189,19 +177,7 @@
   };
   const HARNESSES = { claude_code: "Claude Code", codex: "Codex" };
   // Two dentists scoring each other on 59 films read twice.
-  const DENTISTS = { reward: 0.83, pass: 0.61 };
-  const VIEWS = {
-    reward: {
-      sub: "Score per film from 0 to 1, averaged over 200 films. Partial credit counts. Whiskers: 95% interval.",
-      ticks: ["0", "0.25", "0.5", "0.75", "1"],
-      reference: (share) => `dentists ${share.toFixed(2)}`,
-    },
-    pass: {
-      sub: "Films with a perfect score of 1, out of 200. Amber is partial credit.",
-      ticks: ["0", "25%", "50%", "75%", "100%"],
-      reference: (share) => `dentists ${percent(share, 0)}`,
-    },
-  };
+  const DENTISTS_REWARD = 0.83;
   // Why a run is unfinished. Shown only while the run is not complete.
   const UNFINISHED_NOTES = {
     "benchmark-gemini-3-8-flash-claude_code": "Stopped: inference budget ran out.",
@@ -221,10 +197,9 @@
     for (const [name, value] of Object.entries(attributes)) node.setAttribute(name, String(value));
     return node;
   };
-  const percent = (share, digits = 1) => `${(share * 100).toFixed(digits)}%`;
   const complete = (entry) => entry.status === "complete" && entry.expected > 0 &&
     entry.succeeded === entry.expected && entry.errors === 0 &&
-    Number.isFinite(entry.mean_reward) && Number.isFinite(entry.pass_rate);
+    Number.isFinite(entry.mean_reward);
   const provider = (entry) => {
     const key = String(entry.model).split("/")[0];
     return PROVIDERS[key] ?? { name: key, color: "var(--other-provider)" };
@@ -261,9 +236,8 @@
   }
 
   function heroOutcome(reward) {
-    if (reward === 1) return ["pass", "pass"];
-    if (reward > 0) return ["mid", `partial ${reward.toFixed(2)}`];
-    return ["fail", "miss"];
+    const tone = reward === 1 ? "pass" : reward > 0 ? "mid" : "fail";
+    return [tone, `reward ${reward.toFixed(2)}`];
   }
 
   async function loadHero() {
@@ -316,7 +290,7 @@
   }
 
   // ---- Leaderboard
-  function plot(view) {
+  function plot() {
     const overlay = el("div", undefined, "plot");
     for (const left of [0, 25, 50, 75]) {
       const line = el("i");
@@ -324,56 +298,40 @@
       overlay.append(line);
     }
     const line = el("i", undefined, "ref");
-    line.style.left = `${DENTISTS[view] * 100}%`;
-    const label = el("span", VIEWS[view].reference(DENTISTS[view]), "ref-label");
-    label.style.left = `${DENTISTS[view] * 100}%`;
+    line.style.left = `${DENTISTS_REWARD * 100}%`;
+    const label = el("span", `dentists ${DENTISTS_REWARD.toFixed(2)}`, "ref-label");
+    label.style.left = `${DENTISTS_REWARD * 100}%`;
     overlay.append(line, label);
     return overlay;
   }
 
-  function barRow(entry, view) {
+  function barRow(entry) {
     const who = provider(entry);
     const row = el("div", undefined, "bar-row");
     row.setAttribute("role", "listitem");
     row.style.setProperty("--provider", who.color);
     const track = el("div", undefined, "bar-track");
-    let value;
-    if (view === "pass") {
-      const total = entry.expected;
-      const segments = el("div", undefined, "bar-segments");
-      for (const [name, count] of [["pass", entry.outcomes.pass], ["partial", entry.outcomes.partial], ["zero", entry.outcomes.zero]]) {
-        const part = el("span", undefined, name);
-        part.style.width = `${(count / total) * 100}%`;
-        segments.append(part);
-      }
-      track.append(segments);
-      value = el("span", percent(entry.outcomes.pass / total), "bar-value");
-      value.style.color = "var(--pass-ink)";
-    } else {
-      const fill = el("span", undefined, "bar-fill");
-      fill.style.width = `${entry.mean_reward * 100}%`;
-      track.append(fill);
-      const range = interval(entry.mean_reward_ci95);
-      if (range && range[1] > range[0]) {
-        const whisker = el("span", undefined, "whisker");
-        whisker.style.left = `${range[0] * 100}%`;
-        whisker.style.width = `${(range[1] - range[0]) * 100}%`;
-        track.append(whisker);
-      }
-      value = el("span", entry.mean_reward.toFixed(3), "bar-value");
+    const fill = el("span", undefined, "bar-fill");
+    fill.style.width = `${entry.mean_reward * 100}%`;
+    track.append(fill);
+    const range = interval(entry.mean_reward_ci95);
+    if (range && range[1] > range[0]) {
+      const whisker = el("span", undefined, "whisker");
+      whisker.style.left = `${range[0] * 100}%`;
+      whisker.style.width = `${(range[1] - range[0]) * 100}%`;
+      track.append(whisker);
     }
     const label = el("a", undefined, "bar-label");
     label.href = `traces.html?run=${encodeURIComponent(entry.id)}`;
     label.append(el("span", entry.name, "bar-name"), el("span", harness(entry), "bar-harness"));
-    const range = interval(entry.mean_reward_ci95);
-    const passRange = interval(entry.pass_rate_ci95);
+    const films = entry.outcomes;
     row.title = [
       `${entry.name} · ${harness(entry)} ${entry.harness_version || ""}`.trim(),
-      `reward ${entry.mean_reward.toFixed(3)}${range ? ` (95% interval ${range[0].toFixed(3)} to ${range[1].toFixed(3)})` : ""}`,
-      `pass ${percent(entry.pass_rate)} (${entry.pass_count} of ${entry.expected} films${passRange ? `; 95% interval ${percent(passRange[0])} to ${percent(passRange[1])}` : ""})`,
+      `mean reward ${entry.mean_reward.toFixed(3)}${range ? ` (95% interval ${range[0].toFixed(3)} to ${range[1].toFixed(3)})` : ""}`,
+      films ? `${films.pass} perfect, ${films.partial} partial credit, ${films.zero} zero, of ${entry.expected} films` : null,
       Number.isFinite(entry.avg_model_calls) ? `${entry.avg_model_calls.toFixed(1)} model calls per film` : null,
     ].filter(Boolean).join("\n");
-    row.append(value, track, label);
+    row.append(el("span", entry.mean_reward.toFixed(3), "bar-value"), track, label);
     return row;
   }
 
@@ -396,13 +354,10 @@
     return item;
   }
 
-  function renderLegend(ranked, view) {
+  function renderLegend(ranked) {
     const legend = $("legend");
     legend.replaceChildren();
-    const items = view === "pass"
-      ? [["Pass", "var(--pass-bar)"], ["Partial credit", "var(--mid-bar)"], ["Zero", "var(--fail-bar)"]]
-      : [...new Map(ranked.map((entry) => [provider(entry).name, provider(entry).color])).entries()];
-    for (const [name, color] of items) {
+    for (const [name, color] of new Map(ranked.map((entry) => [provider(entry).name, provider(entry).color]))) {
       const item = el("span");
       const dot = el("i");
       dot.style.setProperty("--dot", color);
@@ -411,16 +366,13 @@
     }
   }
 
-  function render(ranked, view) {
+  function render(ranked) {
     const rows = $("bars-rows");
     rows.replaceChildren();
-    if (ranked.length) rows.append(plot(view), ...ranked.map((entry) => barRow(entry, view)));
+    if (ranked.length) rows.append(plot(), ...ranked.map((entry) => barRow(entry)));
     else rows.append(el("p", "No run is complete yet.", "note"));
     $("bars").querySelector(".axis").hidden = !ranked.length;
-    renderLegend(ranked, view);
-    $("view-sub").textContent = VIEWS[view].sub;
-    [...$("axis-ticks").children].forEach((tick, index) => { tick.textContent = VIEWS[view].ticks[index]; });
-    for (const button of document.querySelectorAll(".seg button")) button.setAttribute("aria-pressed", String(button.dataset.view === view));
+    renderLegend(ranked);
   }
 
   async function load() {
@@ -430,13 +382,8 @@
     if (!Array.isArray(entries)) throw new Error("Invalid benchmark index");
     const ranked = entries.filter(complete).sort((a, b) => b.mean_reward - a.mean_reward);
     const unfinished = entries.filter((entry) => !complete(entry)).sort((a, b) => b.succeeded - a.succeeded);
-    if (ranked.some((entry) => !entry.outcomes || typeof entry.outcomes !== "object")) throw new Error("A complete run has no outcome counts");
 
-    let view = "reward";
-    render(ranked, view);
-    for (const button of document.querySelectorAll(".seg button")) {
-      button.addEventListener("click", () => { view = button.dataset.view; render(ranked, view); });
-    }
+    render(ranked);
 
     $("bars-count").textContent = `${ranked.length} complete · ${unfinished.length} unfinished`;
     if (unfinished.length) {

@@ -160,7 +160,7 @@
   const score = (value) => Number.isFinite(value) ? value.toFixed(3) : "unscored";
   const complete = (entry) => entry.status === "complete" && entry.expected > 0 &&
     entry.succeeded === entry.expected && entry.errors === 0 &&
-    Number.isFinite(entry.mean_reward) && Number.isFinite(entry.pass_rate);
+    Number.isFinite(entry.mean_reward);
   const base = new URL("./", location.href);
   function localPath(value, image = false) {
     if (typeof value !== "string" || !/^data\//.test(value)) return null;
