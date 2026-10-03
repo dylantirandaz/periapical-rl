@@ -35,10 +35,12 @@ MAX_REQUEST_BYTES: Final = 64 * 1024 * 1024
 
 
 def prime_credentials() -> tuple[str, str | None]:
+    """Credentials from the environment, as in a sandbox, else from the Prime CLI config file."""
+    api_key = os.environ.get("PRIME_API_KEY")
+    if api_key is not None:
+        return api_key, os.environ.get("PRIME_TEAM_ID")
     config = json.loads((Path.home() / ".prime" / "config.json").read_text())
-    api_key = os.environ.get("PRIME_API_KEY") or config["api_key"]
-    team_id = os.environ.get("PRIME_TEAM_ID") or config.get("team_id")
-    return api_key, team_id
+    return config["api_key"], os.environ.get("PRIME_TEAM_ID") or config.get("team_id")
 
 
 def holds_image_result(message: Message) -> bool:
