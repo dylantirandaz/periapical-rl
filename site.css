@@ -23,7 +23,7 @@
   --openai: #ececec; --anthropic: #e08a6b; --google: #6cc08f; --spacexai: #d9b872;
   --deepseek: #7fa1ee; --zai: #9ba4b6; --thinking-machines: #b497dc; --other-provider: #7c7c80;
 
-  /* Colours for a film's reward in the hero label: 1, between 0 and 1, and 0. */
+  /* Colours for a film's score in the hero label: 1, between 0 and 1, and 0. */
   --pass-ink: #6ee0a8; --pass-wash: rgba(52, 211, 153, 0.10); --pass-edge: rgba(52, 211, 153, 0.35);
   --mid-ink: #e7b45a; --mid-wash: rgba(245, 158, 11, 0.10); --mid-edge: rgba(245, 158, 11, 0.35);
   --fail-ink: #f08a8a; --fail-wash: rgba(239, 68, 68, 0.10); --fail-edge: rgba(239, 68, 68, 0.35);
@@ -110,7 +110,6 @@ table.data .num { text-align: right; font-variant-numeric: tabular-nums; }
 /* Hero: title, one line, then a large central radiograph with story-style progress. */
 .hero { padding-top: 64px; text-align: center; }
 .hero h1 { margin: 0 auto; font: 400 88px/0.96 var(--display); letter-spacing: -0.02em; color: var(--ink-strong); }
-.hero-sub { margin: 16px auto 0; font: italic 400 25px/1.25 var(--display); color: var(--muted); }
 .stage { position: relative; margin: 44px auto 0; aspect-ratio: 2 / 1; overflow: hidden; border: 1px solid var(--line); border-radius: 6px; background: var(--film); }
 .stage::after { content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none; background: radial-gradient(ellipse at 50% 46%, transparent 55%, rgba(0, 0, 0, 0.55) 100%); }
 .slide { position: absolute; inset: 0; z-index: 1; opacity: 0; transition: opacity 1.1s ease; }
@@ -166,7 +165,6 @@ table.data .num { text-align: right; font-variant-numeric: tabular-nums; }
   .title { font-size: 38px; }
   .hero { padding-top: 40px; }
   .hero h1 { font-size: 46px; }
-  .hero-sub { font-size: 20px; }
   .stage { margin-top: 32px; aspect-ratio: 16 / 9; }
   .tabs { margin-top: 40px; }
   .kv { grid-template-columns: minmax(0, 1fr); gap: 0; }

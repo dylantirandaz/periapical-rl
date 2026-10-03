@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#121212">
 <title>Traces · PanoRead</title>
-<meta name="description" content="PanoRead agent traces: public messages, tool calls, returned thinking, crop images and model boxes against dentist boxes.">
+<meta name="description" content="Agent traces: every message, tool call and image.">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@300;400;500;700&family=Spectral:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap">
 <link rel="stylesheet" href="site.css">
 <style>
@@ -55,18 +55,18 @@
 <a class="skip-link" href="#main">Skip to content</a>
 <header class="site-header"><div class="container">
   <a class="brand" href="benchmark.html"><b>PanoRead</b><span>.periapical</span></a>
-  <nav class="site-nav" aria-label="Site"><a href="benchmark.html">Leaderboard</a><a href="traces.html" aria-current="page">Traces</a><a class="optional" href="https://huggingface.co/datasets/tirandazdylan/periapical-lesions-pai">Data</a><a class="optional" href="https://github.com/dylantirandaz/dental-environments">Benchmark</a></nav>
+  <nav class="site-nav" aria-label="Site"><a href="benchmark.html">Leaderboard</a><a href="traces.html" aria-current="page">Traces</a><a class="optional" href="https://huggingface.co/datasets/tirandazdylan/periapical-lesions-pai">Data</a></nav>
 </div></header>
 
 <main id="main" class="container">
 
 <h1 class="title">Traces</h1>
-<p class="mono-note tr-meta" id="run-meta" role="status">Loading benchmark data…</p>
+<p class="mono-note tr-meta" id="run-meta" role="status">Loading…</p>
 <div class="tr-controls">
   <label class="eyebrow">Model <select class="field" id="run-select" disabled></select></label>
   <label class="eyebrow">Case <select class="field" id="case-select" disabled></select></label>
 </div>
-<details class="tr-details"><summary>Run data and protocol</summary><pre class="reply" id="run-data"></pre></details>
+<details class="tr-details"><summary>Run data</summary><pre class="reply" id="run-data"></pre></details>
 
 <section class="block" aria-label="Film viewer">
   <div class="viewer-layout">
@@ -79,14 +79,14 @@
       </div>
     </div>
     <div>
-      <div class="eyebrow tr-label"><span>Films</span><span id="grid-note"></span></div>
+      <div class="eyebrow tr-label"><span>Films</span></div>
       <div class="grid" id="grid"></div>
       <div class="legend" style="margin-top:10px">
         <span>score</span>
         <span><i class="cell" style="background:var(--s0)"></i>0</span>
         <span><i class="cell" style="background:var(--s2)"></i>0.5</span>
         <span><i class="cell" style="background:var(--s4)"></i>1</span>
-        <span><i class="cell" style="box-shadow:inset 0 0 0 1.5px var(--fail-ink)"></i>error / unscored</span>
+        <span><i class="cell" style="box-shadow:inset 0 0 0 1.5px var(--fail-ink)"></i>error</span>
       </div>
     </div>
   </div>
@@ -95,14 +95,13 @@
 <section class="block" id="case-section" hidden aria-labelledby="case-title">
   <h2 class="section-title" id="case-title">Case trace</h2>
   <div class="tr-status" id="case-status" role="status"></div>
-  <p class="note" id="thinking-note"></p>
-  <p class="note"><a id="trace-download" hidden download>Download public trace JSON</a></p>
+  <p class="note"><a id="trace-download" hidden download>Trace JSON</a></p>
   <details class="tr-details" id="thinking-section" hidden>
-    <summary>Returned thinking</summary>
+    <summary>Thinking</summary>
     <pre class="reply" id="thinking"></pre>
   </details>
   <details class="tr-details">
-    <summary>Selected attempt final reply</summary>
+    <summary>Final reply</summary>
     <pre class="reply" id="reply"></pre>
   </details>
   <p class="note" id="trace-status" role="status"></p>
@@ -115,31 +114,28 @@
     <ul class="note" id="warnings"></ul>
   </details>
   <details class="tr-details" id="tools-section" hidden>
-    <summary>Tool definitions</summary>
-    <pre class="reply" id="tools">Open to load tool definitions.</pre>
+    <summary>Tools</summary>
+    <pre class="reply" id="tools"></pre>
   </details>
   <details class="tr-details" id="calls-section" hidden>
-    <summary>Model calls</summary>
+    <summary>Calls</summary>
     <div class="scroll" id="calls"></div>
   </details>
-  <h3 class="section-title" style="margin-top:28px">Public conversation</h3>
+  <h3 class="section-title" style="margin-top:28px">Conversation</h3>
   <div id="conversation"></div>
 </section>
-<noscript><p class="note">Enable JavaScript to view benchmark traces. <a href="data/benchmarks.json">Read the benchmark index</a>.</p></noscript>
+<noscript><p class="note">Enable JavaScript to view traces. <a href="data/benchmarks.json">Data</a></p></noscript>
 
 </main>
 
 <footer class="site-footer"><div class="container">
   <div>
     <a class="brand" href="benchmark.html"><b>PanoRead</b><span>.periapical</span></a>
-    <p class="footer-label">Pages</p>
-    <ul class="footer-links"><li><a href="benchmark.html">Leaderboard</a></li><li><a href="traces.html">Agent traces</a></li></ul>
-    <p class="footer-label">Source</p>
-    <ul class="footer-links"><li><a href="https://github.com/dylantirandaz/dental-environments">dental-environments</a> <span class="sep">·</span> <a href="https://github.com/dylantirandaz/periapical-rl">periapical-rl</a> <span class="sep">·</span> <a href="https://huggingface.co/datasets/tirandazdylan/periapical-lesions-pai">Dataset</a></li></ul>
+    <p class="footer-label">Data</p>
+    <ul class="footer-links"><li><a href="https://huggingface.co/datasets/tirandazdylan/periapical-lesions-pai">Dataset</a></li></ul>
   </div>
   <div class="footer-aside">
     <p>Films: Do et al. 2024, CC BY 4.0.</p>
-    <p>Set in Instrument Serif, Spectral and JetBrains Mono.</p>
   </div>
 </div></footer>
 
@@ -218,14 +214,14 @@
     const imageCount = messageImages(message).size;
     if (imageCount) return `${imageCount} image${imageCount === 1 ? "" : "s"}`;
     if (message.tool_calls?.length) return message.tool_calls.map((call) => call.function?.name || call.name || "tool call").join(", ").slice(0, 120);
-    if (message.reasoning_content) return "Returned thinking";
-    return "Public message fields";
+    if (message.reasoning_content) return "Thinking";
+    return "message";
   }
   function renderConversation(messages) {
     const container = $("conversation");
     container.replaceChildren();
     if (!messages.length) {
-      container.append(el("p", { class: "errors" }, "No public messages or prompt were returned."));
+      container.append(el("p", { class: "errors" }, "No messages."));
       return;
     }
     messages.forEach((message, index) => {
@@ -240,7 +236,7 @@
           const display = image.display_size;
           const original = image.original_size;
           const size = Array.isArray(display) && Array.isArray(original)
-            ? `; shown at ${Math.max(...display)} px; original ${original.join("x")}` : "";
+            ? ` · ${Math.max(...display)} px of ${original.join("x")}` : "";
           gallery.append(imageFigure(path, `Message ${index + 1}, image ${++imageIndex}${size}`));
         }
         detail.append(gallery);
@@ -257,11 +253,11 @@
   function renderCalls(calls) {
     $("calls").replaceChildren();
     if (!calls.length) {
-      $("calls").append(el("p", { class: "caption" }, "No model calls recorded."));
+      $("calls").append(el("p", { class: "caption" }, "No calls."));
       return;
     }
     const table = el("table", { class: "data" }), head = el("thead"), heading = el("tr"), body = el("tbody");
-    for (const label of ["Index", "Finish reason", "Prompt tokens", "Completion tokens", "Cached tokens", "Seconds", "Error"]) {
+    for (const label of ["#", "Finish", "Prompt", "Output", "Cached", "Sec", "Error"]) {
       heading.append(el("th", { scope: "col" }, label));
     }
     head.append(heading);
@@ -287,18 +283,15 @@
     const messages = nodes.length ? nodes.map((node) => node.message) : activeTrace.prompt || [];
     $("attempt-status").hidden = false;
     $("attempt-status").replaceChildren(el("p", {}, `Attempt ${attempt.attempt} · ${attempt.status} · score ${score(attempt.reward)}` +
-      (attempt.selected ? " · selected for scoring" : " · not selected; film boxes and final reply above belong to the scored attempt")));
+      (attempt.selected ? "" : " · not scored")));
     appendErrors($("attempt-status"), attempt.errors);
     const warnings = Array.isArray(attempt.warnings) ? attempt.warnings : [];
     $("warnings-section").hidden = !warnings.length;
     $("warnings-section").open = false;
-    $("warnings-title").textContent = `Warnings after completion (${warnings.length})`;
+    $("warnings-title").textContent = `Warnings (${warnings.length})`;
     $("warnings").replaceChildren(...warnings.map((warning) => el("li", {}, warning)));
     const thinking = messages.map((message) => message.reasoning_content)
       .filter((value) => typeof value === "string" && value.length).join("\n\n");
-    $("thinking-note").textContent = thinking
-      ? "Reasoning shown is what the API returned."
-      : "No reasoning_content text was returned for this attempt. Hidden reasoning is not available.";
     $("thinking-section").hidden = !thinking;
     $("thinking").textContent = thinking;
     $("calls-section").hidden = false;
@@ -321,7 +314,7 @@
     $("tools-section").hidden = true;
     $("tools-section").open = false;
     $("tools-section").ontoggle = null;
-    $("tools").textContent = "Open to load tool definitions.";
+    $("tools").textContent = "";
     $("calls-section").hidden = true;
     $("calls-section").open = false;
     $("calls").replaceChildren();
@@ -332,7 +325,7 @@
     section.hidden = !trace;
     section.open = false;
     section.ontoggle = null;
-    $("tools").textContent = "Open to load tool definitions.";
+    $("tools").textContent = "";
     if (!trace) return;
     const isCurrent = () => request === caseId &&
       activeTrace?.attempts[Number($("attempt-select").value)]?.traces?.[0] === trace;
@@ -342,26 +335,25 @@
       loaded = true;
       const ref = trace.tools_ref;
       if (typeof ref !== "string" || !/^[a-f0-9]{16}$/.test(ref)) {
-        $("tools").textContent = "Tool definitions unavailable: invalid or missing tools_ref.";
+        $("tools").textContent = "Tools unavailable.";
         return;
       }
       const path = localPath(`data/${encodeURIComponent(runId)}/tools/${ref}.json`);
-      $("tools").textContent = `Loading ${path}…`;
+      $("tools").textContent = "Loading…";
       try {
         const tools = await fetchJson(path);
         if (isCurrent()) $("tools").textContent = JSON.stringify(tools, null, 2);
       } catch (error) {
-        if (isCurrent()) $("tools").textContent = `Tool definitions unavailable: ${error.message}`;
+        if (isCurrent()) $("tools").textContent = `Tools unavailable: ${error.message}`;
       }
     };
   }
   async function loadCaseTrace(film, request) {
     const path = localPath(film.trace_path);
     if (!path) {
-      $("trace-status").textContent = `Trace unavailable: invalid local path ${film.trace_path}`;
+      $("trace-status").textContent = "Trace unavailable.";
       return;
     }
-    $("trace-status").textContent = `Loading trace: ${path}`;
     try {
       const trace = await fetchTrace(path);
       if (request !== caseId) return;
@@ -370,18 +362,15 @@
       if (selected < 0) throw new Error(`${path}: no selected attempt`);
       activeTrace = trace;
       trace.attempts.forEach((attempt, index) => {
-        const errors = Array.isArray(attempt.errors) ? attempt.errors.length : 0;
         $("attempt-select").append(el("option", { value: String(index) },
-          `Attempt ${attempt.attempt} · ${attempt.status} · ${score(attempt.reward)} · ${errors} errors${attempt.selected ? " · selected" : ""}`));
+          `Attempt ${attempt.attempt} · ${attempt.status === "success" ? score(attempt.reward) : attempt.status}${attempt.selected ? " · scored" : ""}`));
       });
       $("attempt-control").hidden = trace.attempts.length < 2;
-      $("trace-status").textContent = `${trace.attempts.length} recorded attempt${trace.attempts.length === 1 ? "" : "s"}.`;
       renderAttempt(selected);
     } catch (error) {
       if (request !== caseId) return;
       resetTrace();
       $("trace-status").textContent = `Trace unavailable: ${error.message}`;
-      $("thinking-note").textContent = "Thinking availability cannot be checked without the trace.";
     }
   }
   function drawBoxes(layer, boxes, color, dashed) {
@@ -420,22 +409,21 @@
     if (path) {
       const image = el("img", { src: path, alt: `Dental X-ray ${film.film}` });
       image.addEventListener("error", () => {
-        image.replaceWith(el("div", { class: "empty" }, "Original film image unavailable."));
+        image.replaceWith(el("div", { class: "empty" }, "Image unavailable."));
         svg.remove();
       }, { once: true });
       box.append(image, svg);
-    } else box.append(el("div", { class: "empty" }, "Original film image unavailable."));
+    } else box.append(el("div", { class: "empty" }, "Image unavailable."));
     showLayers();
     const dentists = (film.pai || []).join(", ") || "no lesions";
     const model = film.parsed ? lesions.map((lesion) => lesion.pai).join(", ") || "no lesions" : "unreadable";
-    $("caption").textContent = `Case ${film.film} · selected attempt score ${score(film.reward)} · dentists PAI ${dentists} · model PAI ${model}`;
+    $("caption").textContent = `Case ${film.film} · score ${score(film.reward)} · dentists PAI ${dentists} · model PAI ${model}`;
     $("case-section").hidden = false;
     $("case-title").textContent = `Case ${film.film}`;
-    $("case-status").replaceChildren(el("p", {}, `Selected attempt: ${film.status} · answer ${film.parsed ? "parsed" : "not parsed"} · ${film.model_calls} model calls · ${film.images_viewed} images viewed` +
-      (film.stop_condition === "max_turns" ? " · ended at the 50-turn limit" : "")));
+    $("case-status").replaceChildren(el("p", {}, `${film.status} · ${film.parsed ? "parsed" : "not parsed"} · ${film.model_calls} calls · ${film.images_viewed} images` +
+      (film.stop_condition === "max_turns" ? " · turn limit" : "")));
     appendErrors($("case-status"), film.errors);
-    $("thinking-note").textContent = film.has_thinking ? "Returned thinking is loading from the trace." : "The row reports no returned thinking. Loading trace.";
-    $("reply").textContent = film.reply == null ? "No final reply returned." : film.reply;
+    $("reply").textContent = film.reply == null ? "No reply." : film.reply;
     const download = localPath(film.trace_path);
     $("trace-download").hidden = !download;
     if (download) $("trace-download").href = download;
@@ -450,7 +438,6 @@
     $("case-select").replaceChildren();
     $("case-select").disabled = true;
     $("grid").replaceChildren();
-    $("grid-note").textContent = "";
     $("caption").textContent = "";
     $("case-section").hidden = true;
     $("conversation").replaceChildren();
@@ -460,7 +447,7 @@
     const grid = $("grid");
     const select = $("case-select");
     films.forEach((film, index) => {
-      const label = `Case ${film.film} · ${film.status} · score ${score(film.reward)}`;
+      const label = `Case ${film.film} · ${film.status === "success" ? score(film.reward) : film.status}`;
       const button = el("button", { type: "button", class: "cellbtn", title: label, "aria-label": label });
       if (film.status !== "success" || !Number.isFinite(film.reward)) button.classList.add("noreply");
       button.style.background = Number.isFinite(film.reward)
@@ -469,7 +456,6 @@
       grid.append(button);
       select.append(el("option", { value: String(index) }, label));
     });
-    $("grid-note").textContent = `${films.length} published cases`;
     select.disabled = !films.length;
     if (films.length) renderFilm(0);
   }
@@ -477,12 +463,11 @@
     const request = ++loadId;
     const entry = entries.find((item) => item.id === $("run-select").value);
     if (!entry) return;
-    clearCases("Loading cases…");
+    clearCases("Loading…");
     $("run-data").textContent = JSON.stringify(entry, null, 2);
     const harness = { claude_code: "Claude Code", codex: "Codex" }[entry.harness] ?? entry.harness;
-    $("run-meta").textContent = `${entry.name} · ${entry.model} · ${harness} ${entry.harness_version || ""} · ${entry.split} · ${entry.status} · ${entry.succeeded}/${entry.expected} scored · ${entry.errors} errors` +
-      (complete(entry) ? ` · score ${score(entry.mean_reward)}` : " · unranked") +
-      (entry.reason ? ` · ${entry.reason}` : "");
+    $("run-meta").textContent = `${entry.name} · ${harness}` +
+      (complete(entry) ? ` · score ${score(entry.mean_reward)}` : ` · ${entry.succeeded}/${entry.expected} films · unranked`);
     const url = new URL(location.href);
     url.searchParams.set("run", entry.id);
     history.replaceState(null, "", url);
@@ -492,25 +477,25 @@
       if (!Array.isArray(data)) throw new Error("Invalid case data");
       films = data;
       if (!films.length) {
-        clearCases(entry.reason || "No case traces published for this run.");
+        clearCases(entry.reason || "No cases.");
         return;
       }
       renderGrid();
     } catch (error) {
       if (request !== loadId) return;
-      clearCases(`Case data unavailable: ${error.message}. ${entry.reason || ""}`);
+      clearCases(`Unavailable: ${error.message}`);
     }
   }
   async function main() {
     entries = await fetchJson("data/benchmarks.json");
     if (!Array.isArray(entries)) throw new Error("Invalid benchmark index");
     if (!entries.length) {
-      $("run-meta").textContent = "No benchmark entries published.";
-      clearCases("No benchmark traces published. RL data is separate.");
+      $("run-meta").textContent = "No runs.";
+      clearCases("No traces.");
       return;
     }
     const select = $("run-select");
-    for (const entry of entries) select.append(el("option", { value: entry.id }, `${entry.name} · ${entry.status}`));
+    for (const entry of entries) select.append(el("option", { value: entry.id }, complete(entry) ? entry.name : `${entry.name} · unfinished`));
     const requested = new URLSearchParams(location.search).get("run");
     if (entries.some((entry) => entry.id === requested)) select.value = requested;
     select.disabled = false;
@@ -522,8 +507,8 @@
     await loadRun();
   }
   main().catch((error) => {
-    $("run-meta").textContent = `Benchmark unavailable: ${error.message}`;
-    clearCases("Cannot load benchmark data. No RL fallback is used.");
+    $("run-meta").textContent = `Unavailable: ${error.message}`;
+    clearCases("Cannot load data.");
   });
 })();
   (() => { const header = document.querySelector(".site-header"); const update = () => header.toggleAttribute("data-scrolled", window.scrollY > 4); addEventListener("scroll", update, { passive: true }); update(); })();
