@@ -100,7 +100,7 @@
     <p class="section-sub">Score per film from 0 to 1, averaged over 200 films. Partial credit counts. Whiskers: 95% interval.</p>
     <div class="bars" id="bars" aria-live="polite">
       <div class="bars-rows" id="bars-rows" role="list"></div>
-      <div class="axis" aria-hidden="true"><div></div><div class="ticks"><span style="left:0%">0</span><span style="left:25%">0.25</span><span style="left:50%">0.5</span><span style="left:75%">0.75</span><span style="left:100%">1</span></div><div></div></div>
+      <div class="axis" aria-hidden="true"><div>score</div><div class="ticks"><span style="left:0%">0</span><span style="left:25%">0.25</span><span style="left:50%">0.5</span><span style="left:75%">0.75</span><span style="left:100%">1</span></div><div></div></div>
     </div>
     <div class="bars-foot">
       <span class="mono-note" id="bars-count">Loading…</span>
@@ -121,15 +121,15 @@
     <div class="rl">
       <figure style="margin:0; min-width:0;">
         <svg class="chart" viewBox="0 0 640 360" role="img" aria-label="validation score by RL step"><line x1="56" y1="320.0" x2="620" y2="320.0" class="grid"/><text x="48" y="324.0" class="tick" text-anchor="end">0.00</text><line x1="56" y1="271.0" x2="620" y2="271.0" class="grid"/><text x="48" y="275.0" class="tick" text-anchor="end">0.05</text><line x1="56" y1="222.0" x2="620" y2="222.0" class="grid"/><text x="48" y="226.0" class="tick" text-anchor="end">0.10</text><line x1="56" y1="173.0" x2="620" y2="173.0" class="grid"/><text x="48" y="177.0" class="tick" text-anchor="end">0.15</text><line x1="56" y1="124.0" x2="620" y2="124.0" class="grid"/><text x="48" y="128.0" class="tick" text-anchor="end">0.20</text><line x1="56" y1="75.0" x2="620" y2="75.0" class="grid"/><text x="48" y="79.0" class="tick" text-anchor="end">0.25</text><line x1="56" y1="26.0" x2="620" y2="26.0" class="grid"/><text x="48" y="30.0" class="tick" text-anchor="end">0.30</text><line x1="56.0" y1="26" x2="56.0" y2="320" class="grid"/><text x="56.0" y="338" class="tick" text-anchor="middle">0</text><line x1="150.0" y1="26" x2="150.0" y2="320" class="grid"/><text x="150.0" y="338" class="tick" text-anchor="middle">15</text><line x1="244.0" y1="26" x2="244.0" y2="320" class="grid"/><text x="244.0" y="338" class="tick" text-anchor="middle">30</text><line x1="338.0" y1="26" x2="338.0" y2="320" class="grid"/><text x="338.0" y="338" class="tick" text-anchor="middle">45</text><line x1="432.0" y1="26" x2="432.0" y2="320" class="grid"/><text x="432.0" y="338" class="tick" text-anchor="middle">60</text><line x1="526.0" y1="26" x2="526.0" y2="320" class="grid"/><text x="526.0" y="338" class="tick" text-anchor="middle">75</text><line x1="620.0" y1="26" x2="620.0" y2="320" class="grid"/><text x="620.0" y="338" class="tick" text-anchor="middle">90</text><text x="338.0" y="354" class="tick" text-anchor="middle">RL step</text><rect x="56" y="26" width="564" height="294" class="frame"/><path d="M56.0,189.6 118.7,193.9 181.3,159.5 244.0,175.5 306.7,104.2 369.3,92.6 432.0,112.5 494.7,111.3 557.3,104.0 620.0,96.3" fill="none" stroke="var(--thinking-machines)" stroke-width="2"/><circle cx="56.0" cy="189.6" r="3" fill="var(--thinking-machines)"/><circle cx="118.7" cy="193.9" r="3" fill="var(--thinking-machines)"/><circle cx="181.3" cy="159.5" r="3" fill="var(--thinking-machines)"/><circle cx="244.0" cy="175.5" r="3" fill="var(--thinking-machines)"/><circle cx="306.7" cy="104.2" r="3" fill="var(--thinking-machines)"/><circle cx="369.3" cy="92.6" r="3" fill="var(--thinking-machines)"/><circle cx="432.0" cy="112.5" r="3" fill="var(--thinking-machines)"/><circle cx="494.7" cy="111.3" r="3" fill="var(--thinking-machines)"/><circle cx="557.3" cy="104.0" r="3" fill="var(--thinking-machines)"/><circle cx="620.0" cy="96.3" r="3" fill="var(--thinking-machines)"/></svg>
-        <p class="mono-note" style="margin-top:8px;">Validation reward by RL step · 128 films</p>
+        <p class="mono-note" style="margin-top:8px;">Validation score by RL step · 128 films</p>
       </figure>
       <div style="min-width:0;">
         <p class="eyebrow">Test split · 387 films</p>
         <div class="scroll" style="margin-top:8px;"><table class="data">
-          <thead><tr><th>Checkpoint</th><th class="num">Reward</th></tr></thead>
+          <thead><tr><th>Checkpoint</th><th class="num">Score</th></tr></thead>
           <tbody><tr><td>fine-tuned</td><td class="num">0.12</td></tr><tr><td>+ RL, step 50</td><td class="num">0.18</td></tr></tbody>
         </table></div>
-        <p class="mono-note" style="margin-top:12px;">+0.06 reward · 95% interval 0.03 to 0.08</p>
+        <p class="mono-note" style="margin-top:12px;">+0.06 score · 95% interval 0.03 to 0.08</p>
       </div>
     </div>
   </section>
@@ -177,7 +177,7 @@
   };
   const HARNESSES = { claude_code: "Claude Code", codex: "Codex" };
   // Two dentists scoring each other on 59 films read twice.
-  const DENTISTS_REWARD = 0.83;
+  const DENTISTS_SCORE = 0.83;
   // Why a run is unfinished. Shown only while the run is not complete.
   const UNFINISHED_NOTES = {
     "benchmark-gemini-3-8-flash-claude_code": "Stopped: inference budget ran out.",
@@ -235,9 +235,9 @@
     return slide;
   }
 
-  function heroOutcome(reward) {
-    const tone = reward === 1 ? "pass" : reward > 0 ? "mid" : "fail";
-    return [tone, `reward ${reward.toFixed(2)}`];
+  function heroOutcome(score) {
+    const tone = score === 1 ? "pass" : score > 0 ? "mid" : "fail";
+    return [tone, `score ${score.toFixed(2)}`];
   }
 
   async function loadHero() {
@@ -298,9 +298,9 @@
       overlay.append(line);
     }
     const line = el("i", undefined, "ref");
-    line.style.left = `${DENTISTS_REWARD * 100}%`;
-    const label = el("span", `dentists ${DENTISTS_REWARD.toFixed(2)}`, "ref-label");
-    label.style.left = `${DENTISTS_REWARD * 100}%`;
+    line.style.left = `${DENTISTS_SCORE * 100}%`;
+    const label = el("span", `dentists ${DENTISTS_SCORE.toFixed(2)}`, "ref-label");
+    label.style.left = `${DENTISTS_SCORE * 100}%`;
     overlay.append(line, label);
     return overlay;
   }
@@ -327,7 +327,7 @@
     const films = entry.outcomes;
     row.title = [
       `${entry.name} · ${harness(entry)} ${entry.harness_version || ""}`.trim(),
-      `mean reward ${entry.mean_reward.toFixed(3)}${range ? ` (95% interval ${range[0].toFixed(3)} to ${range[1].toFixed(3)})` : ""}`,
+      `score ${entry.mean_reward.toFixed(3)}${range ? ` (95% interval ${range[0].toFixed(3)} to ${range[1].toFixed(3)})` : ""}`,
       films ? `${films.pass} perfect, ${films.partial} partial credit, ${films.zero} zero, of ${entry.expected} films` : null,
       Number.isFinite(entry.avg_model_calls) ? `${entry.avg_model_calls.toFixed(1)} model calls per film` : null,
     ].filter(Boolean).join("\n");

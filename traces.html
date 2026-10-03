@@ -286,7 +286,7 @@
     const nodes = trace?.nodes || [];
     const messages = nodes.length ? nodes.map((node) => node.message) : activeTrace.prompt || [];
     $("attempt-status").hidden = false;
-    $("attempt-status").replaceChildren(el("p", {}, `Attempt ${attempt.attempt} · ${attempt.status} · reward ${score(attempt.reward)}` +
+    $("attempt-status").replaceChildren(el("p", {}, `Attempt ${attempt.attempt} · ${attempt.status} · score ${score(attempt.reward)}` +
       (attempt.selected ? " · selected for scoring" : " · not selected; film boxes and final reply above belong to the scored attempt")));
     appendErrors($("attempt-status"), attempt.errors);
     const warnings = Array.isArray(attempt.warnings) ? attempt.warnings : [];
@@ -428,7 +428,7 @@
     showLayers();
     const dentists = (film.pai || []).join(", ") || "no lesions";
     const model = film.parsed ? lesions.map((lesion) => lesion.pai).join(", ") || "no lesions" : "unreadable";
-    $("caption").textContent = `Case ${film.film} · selected attempt reward ${score(film.reward)} · dentists PAI ${dentists} · model PAI ${model}`;
+    $("caption").textContent = `Case ${film.film} · selected attempt score ${score(film.reward)} · dentists PAI ${dentists} · model PAI ${model}`;
     $("case-section").hidden = false;
     $("case-title").textContent = `Case ${film.film}`;
     $("case-status").replaceChildren(el("p", {}, `Selected attempt: ${film.status} · answer ${film.parsed ? "parsed" : "not parsed"} · ${film.model_calls} model calls · ${film.images_viewed} images viewed` +
@@ -460,7 +460,7 @@
     const grid = $("grid");
     const select = $("case-select");
     films.forEach((film, index) => {
-      const label = `Case ${film.film} · ${film.status} · reward ${score(film.reward)}`;
+      const label = `Case ${film.film} · ${film.status} · score ${score(film.reward)}`;
       const button = el("button", { type: "button", class: "cellbtn", title: label, "aria-label": label });
       if (film.status !== "success" || !Number.isFinite(film.reward)) button.classList.add("noreply");
       button.style.background = Number.isFinite(film.reward)
@@ -481,7 +481,7 @@
     $("run-data").textContent = JSON.stringify(entry, null, 2);
     const harness = { claude_code: "Claude Code", codex: "Codex" }[entry.harness] ?? entry.harness;
     $("run-meta").textContent = `${entry.name} · ${entry.model} · ${harness} ${entry.harness_version || ""} · ${entry.split} · ${entry.status} · ${entry.succeeded}/${entry.expected} scored · ${entry.errors} errors` +
-      (complete(entry) ? ` · mean reward ${score(entry.mean_reward)}` : " · unranked") +
+      (complete(entry) ? ` · score ${score(entry.mean_reward)}` : " · unranked") +
       (entry.reason ? ` · ${entry.reason}` : "");
     const url = new URL(location.href);
     url.searchParams.set("run", entry.id);
