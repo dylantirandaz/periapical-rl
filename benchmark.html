@@ -57,15 +57,15 @@
   .chart .frame { fill: none; stroke: var(--line); stroke-width: 1; }
   .chart .tick { font: 400 11px var(--mono); fill: var(--muted-2); }
   .chart .band { fill-opacity: 0.13; stroke: none; }
-  .chart .band.sft { fill: var(--ink-strong); }
+  .chart .band.sft { fill: var(--pass-ink); }
   .chart .band.rl { fill: var(--thinking-machines); }
   .chart .line { fill: none; stroke-width: 2; }
-  .chart .line.sft { stroke: var(--ink-strong); }
+  .chart .line.sft { stroke: var(--pass-ink); }
   .chart .line.rl { stroke: var(--thinking-machines); }
-  .chart .dot.sft { fill: var(--ink-strong); }
+  .chart .dot.sft { fill: var(--pass-ink); }
   .chart .dot.rl { fill: var(--thinking-machines); }
   .chart .shuffled { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 5 4; }
-  .legend .swatch { width: 18px; height: 0; border-radius: 0; border-top: 2px solid var(--ink-strong); background: none; }
+  .legend .swatch { width: 18px; height: 0; border-radius: 0; border-top: 2px solid var(--pass-ink); background: none; }
   .legend .swatch.rl { border-color: var(--thinking-machines); }
   .legend .swatch.dashed { border-top-style: dashed; border-color: var(--muted); }
   .ladder { display: grid; grid-template-columns: auto auto auto; justify-content: start; align-items: end; gap: 0 clamp(26px, 6vw, 64px); margin-top: 28px; }
@@ -73,6 +73,7 @@
   .rung + .rung::before { content: "→"; position: absolute; left: calc(-1 * clamp(26px, 6vw, 64px) / 2 - 0.4em); bottom: 0.2em; font: 300 clamp(20px, 5vw, 32px)/1 var(--display); color: var(--faint); }
   .rung-label { display: block; margin-bottom: 6px; font: 400 11px/16px var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted-2); }
   .rung-score { display: block; font: 400 clamp(34px, 9vw, 60px)/1 var(--display); letter-spacing: -0.01em; color: var(--ink-strong); }
+  .rung:nth-child(2) .rung-score { color: var(--pass-ink); }
   .rung:last-child .rung-score { color: var(--thinking-machines); }
 
   @media (max-width: 860px) { .rl { grid-template-columns: minmax(0, 1fr); } }
@@ -439,12 +440,14 @@
     axis.textContent = "training step";
     parts.push(axis, svg("rect", { x: left, y: top, width: right - left, height: bottom - top, class: "frame" }));
     parts.push(svg("polyline", { points: points.map((point) => `${x(point.step)},${y(point.shuffled)}`).join(" "), class: "shuffled" }));
-    for (const phase of data.phases) {
+    for (const [index, phase] of data.phases.entries()) {
       const kind = phase.name === "+ RL" ? "rl" : "sft";
+      const next = data.phases[index + 1];  // the fine-tune line ends where the RL line starts, so the two touch
+      const linePoints = next ? [...phase.points, { step: next.points[0].step, score: next.points[0].score }] : phase.points;
       const upper = phase.points.map((point) => `${x(point.step)},${y(point.ci95[1])}`);
       const lower = phase.points.map((point) => `${x(point.step)},${y(point.ci95[0])}`).reverse();
       parts.push(svg("polygon", { points: [...upper, ...lower].join(" "), class: `band ${kind}` }));
-      parts.push(svg("polyline", { points: phase.points.map((point) => `${x(point.step)},${y(point.score)}`).join(" "), class: `line ${kind}` }));
+      parts.push(svg("polyline", { points: linePoints.map((point) => `${x(point.step)},${y(point.score)}`).join(" "), class: `line ${kind}` }));
       for (const point of phase.points) parts.push(svg("circle", { cx: x(point.step), cy: y(point.score), r: 3, class: `dot ${kind}` }));
     }
     chart.replaceChildren(...parts);
