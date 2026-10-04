@@ -174,10 +174,6 @@
   const HARNESSES = { claude_code: "Claude Code", codex: "Codex" };
   // Two dentists scoring each other on 59 films read twice.
   const DENTISTS_SCORE = 0.83;
-  // Why a run is unfinished. Shown only while the run is not complete.
-  const UNFINISHED_NOTES = {
-    "benchmark-gemini-3-8-flash-claude_code": "Stopped: inference budget ran out.",
-  };
   const PLAIN_ROUTES = ["Prime Inference", "Tinker Anthropic-compatible API"];
   const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -343,7 +339,7 @@
     const fill = el("span");
     fill.style.width = `${(entry.succeeded / entry.expected) * 100}%`;
     bar.append(fill);
-    const notes = [UNFINISHED_NOTES[entry.id] ?? entry.reason];
+    const notes = [entry.reason];
     if (entry.turn_limit_stops > 0) notes.push(`${entry.turn_limit_stops} hit the turn limit.`);
     body.append(head, bar, el("p", notes.filter(Boolean).join(" "), "unfinished-note"));
     item.append(el("span", `${entry.succeeded}/${entry.expected}`, "count"), body);
