@@ -6,7 +6,17 @@
 <meta name="theme-color" content="#000000">
 <title>Traces · PanoRead</title>
 <meta name="description" content="Agent traces: every message, tool call and image.">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@300;400;500;700&family=Spectral:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap">
+<link rel="canonical" href="https://dylantirandaz.com/periapical-rl/traces.html">
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://dylantirandaz.com/periapical-rl/traces.html">
+<meta property="og:title" content="PanoRead traces">
+<meta property="og:description" content="Every message, tool call and image from the agents' runs.">
+<meta property="og:image" content="https://dylantirandaz.com/periapical-rl/assets/hero/14711.webp">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="fonts.css">
 <link rel="stylesheet" href="site.css">
 <style>
   /* The viewer follows Prime Intellect's evaluation sample view: films on the left, the conversation in the
@@ -71,7 +81,9 @@
   .pv-sep { width: 1px; height: 14px; background: var(--px-line); }
 
   .pv-messages { flex: 1; min-height: 0; margin: 0 20px 20px; overflow-y: auto; border: 1px solid var(--px-line); border-radius: 12px; background: rgba(0, 0, 0, 0.4); overscroll-behavior: contain; }
-  .msg { border-bottom: 1px solid var(--px-line); }
+  .msg { position: relative; border-bottom: 1px solid var(--px-line); }
+  .msg-copy { position: absolute; top: 14px; right: 44px; }
+  @media (max-width: 760px) { .msg-copy { right: 38px; } }
   .msg > summary { display: grid; grid-template-columns: 84px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 56px; padding: 0 14px 0 20px; list-style: none; cursor: pointer; }
   .msg > summary::-webkit-details-marker { display: none; }
   .msg > summary:hover { background: rgba(255, 255, 255, 0.025); }
@@ -227,7 +239,7 @@
         </section>
         <section class="pv-sec" hidden><h3>metrics</h3><dl class="pv-rows" id="ov-metrics"></dl></section>
         <section class="pv-sec" hidden><h3>activity</h3><dl class="pv-rows" id="ov-activity"></dl></section>
-        <section class="pv-sec"><div class="pv-sec-head"><h3>answer</h3><button type="button" class="pv-icon-button" id="answer-copy" aria-label="Copy answer"></button></div><pre class="pv-pre" id="ov-answer"></pre></section>
+        <section class="pv-sec"><div class="pv-sec-head"><h3>answer</h3><button type="button" class="pv-icon-button" id="answer-copy" aria-label="Copy answer"></button></div><pre class="pv-pre" id="ov-answer" tabindex="0" aria-label="Final answer"></pre></section>
         <section class="pv-sec" hidden><h3>timing</h3><dl class="pv-rows" id="ov-timing"></dl></section>
         <section class="pv-sec" hidden><h3>tokens</h3><dl class="pv-rows" id="ov-tokens"></dl></section>
         <section class="pv-sec" id="ov-errors" hidden><h3>errors</h3><ul class="pv-notes fail"></ul></section>
@@ -424,18 +436,20 @@
     catch { button.dataset.state = "failed"; }
     setTimeout(() => button.removeAttribute("data-state"), 1200);
   }
-  function rowActions(textForCopy) {
+  // The summary holds only the chevron; the copy button is a sibling drawn over the row's right edge, so no
+  // control sits inside another control.
+  function chevron() {
     const actions = el("span", { class: "msg-actions" });
-    if (textForCopy) {
-      const copy = el("button", { type: "button", class: "pv-icon-button", "aria-label": "Copy message" });
-      copy.append(icon("copy"));
-      copy.addEventListener("click", (event) => { event.preventDefault(); event.stopPropagation(); void copyText(copy, textForCopy()); });
-      actions.append(copy);
-    }
-    const chevron = el("span", { class: "msg-chevron", "aria-hidden": "true" });
-    chevron.append(icon("down"));
-    actions.append(chevron);
+    const mark = el("span", { class: "msg-chevron", "aria-hidden": "true" });
+    mark.append(icon("down"));
+    actions.append(mark);
     return actions;
+  }
+  function copyButton(textForCopy) {
+    const copy = el("button", { type: "button", class: "pv-icon-button msg-copy", "aria-label": "Copy message" });
+    copy.append(icon("copy"));
+    copy.addEventListener("click", () => void copyText(copy, textForCopy()));
+    return copy;
   }
   function imageFigure(path, label) {
     const figure = el("figure");
@@ -507,15 +521,15 @@
     const toolName = role === "tool" ? toolNames.get(message.tool_call_id) : undefined;
     if (toolName) label.append(el("small", {}, toolName));
     const summary = el("summary");
-    summary.append(label, el("span", { class: "msg-preview" }, previewOf(message)), rowActions(() => messageText(message)));
-    details.append(summary, messageBody(message, call, raw));
+    summary.append(label, el("span", { class: "msg-preview" }, previewOf(message)), chevron());
+    details.append(summary, copyButton(() => messageText(message)), messageBody(message, call, raw));
     details.open = startsOpen(message, role);
     return details;
   }
   function toolsRow(trace, request) {
     const details = el("details", { class: "msg", "data-role": "tools" });
     const summary = el("summary");
-    summary.append(el("span", { class: "msg-role" }, "tools"), el("span", { class: "msg-preview" }, "Tool definitions"), rowActions(null));
+    summary.append(el("span", { class: "msg-role" }, "tools"), el("span", { class: "msg-preview" }, "Tool definitions"), chevron());
     const output = el("pre", { class: "msg-code" }, "Loading…");
     const body = el("div", { class: "msg-body" });
     body.append(output);
@@ -751,7 +765,10 @@
     filmIndex = index;
     resetTrace();
     const items = [...$("film-list").children];
-    items.forEach((item, i) => item.setAttribute("aria-current", String(i === index)));
+    items.forEach((item, i) => {
+      item.setAttribute("aria-current", String(i === index));
+      item.tabIndex = i === index ? 0 : -1;  // one tab stop for the whole list; arrow keys move within it
+    });
     if (reveal) revealItem(items[index]);
     if (focus) items[index].focus({ preventScroll: true });
     $("film-position").textContent = `${index + 1}/${films.length}`;
@@ -766,7 +783,7 @@
     $("film-list").replaceChildren(...films.map((film, index) => {
       const ok = film.status === "success" && Number.isFinite(film.reward);
       const label = `Film ${film.film} · ${ok ? score(film.reward) : film.status}`;
-      const item = el("button", { type: "button", class: "pv-item", title: label, "aria-label": label, "aria-current": "false" });
+      const item = el("button", { type: "button", class: "pv-item", title: label, "aria-label": label, "aria-current": "false", tabindex: "-1" });
       item.append(el("span", {}, `#${film.film}`), el("b", { class: ok ? tone(film.reward) : "idle" }, ok ? film.reward.toFixed(2) : "—"));
       item.addEventListener("click", () => selectFilm(index));
       return item;

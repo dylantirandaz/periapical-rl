@@ -6,12 +6,17 @@
 <meta name="theme-color" content="#000000">
 <title>PanoRead: can agents read dental X-rays?</title>
 <meta name="description" content="Coding agents find, box and grade periapical lesions on 200 real panoramic dental X-rays.">
+<link rel="canonical" href="https://dylantirandaz.com/periapical-rl/benchmark.html">
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://dylantirandaz.com/periapical-rl/benchmark.html">
 <meta property="og:title" content="Can agents read dental X-rays?">
 <meta property="og:description" content="Coding agents read 200 panoramic dental X-rays.">
-<meta property="og:image" content="assets/hero/14711.webp">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@300;400;500;700&family=Spectral:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap">
+<meta property="og:image" content="https://dylantirandaz.com/periapical-rl/assets/hero/14711.webp">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="fonts.css">
 <link rel="stylesheet" href="site.css">
 <style>
   /* Leaderboard bars. Columns: value, plot, label. The plot overlay lines up with the middle column. */
@@ -55,6 +60,7 @@
   .chart { display: block; width: 100%; height: auto; font-family: var(--mono); }
   .chart .grid { stroke: var(--line-soft); stroke-width: 1; }
   .chart .frame { fill: none; stroke: var(--line); stroke-width: 1; }
+  .stage .load-error { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; max-width: none; padding: 24px; text-align: center; color: var(--fail-ink); }
   .chart .tick { font: 400 11px var(--mono); fill: var(--muted-2); }
   .chart .band { fill-opacity: 0.13; stroke: none; }
   .chart .band.sft { fill: var(--pass-ink); }
@@ -160,7 +166,7 @@
       <dt>Score</dt><dd>½ lesion F1 + ½ graded F1, IoU ≥ 0.3</dd>
       <dt>Agents</dt><dd>Codex (GPT-6 Astra), Claude Code (others), 50 turns</dd>
       <dt>Films</dt><dd>First 200 of 387 test films, one try</dd>
-      <dt>Dentists</dt><dd>0.83, two annotators on 59 films</dd>
+      <dt>Dentists</dt><dd>0.83: the source dentists annotated 59 films twice; the two annotations scored against each other (<a href="https://doi.org/10.1016/j.dib.2024.110486">Do et al. 2024</a>).</dd>
     </dl>
   </section>
 </main>
@@ -398,7 +404,12 @@
   load().catch((error) => {
     $("benchmark-status").textContent = `Cannot load benchmark data: ${error.message}.`;
   });
-  loadHero().catch((error) => console.error(`Hero films unavailable: ${error.message}`));
+  loadHero().catch((error) => {
+    console.error(`Hero films unavailable: ${error.message}`);
+    const wrap = $("stage-wrap");
+    wrap.hidden = false;
+    $("stage").replaceChildren(el("p", `Hero films unavailable: ${error.message}`, "note load-error"));
+  });
 
   // ---- Post-training: the ladder and the validation curve.
   async function loadTraining() {
@@ -452,7 +463,10 @@
     }
     chart.replaceChildren(...parts);
   }
-  loadTraining().catch((error) => console.error(`Post-training data unavailable: ${error.message}`));
+  loadTraining().catch((error) => {
+    console.error(`Post-training data unavailable: ${error.message}`);
+    $("ladder-note").textContent = `Post-training data unavailable: ${error.message}`;
+  });
 
   // Underline the tab of the section in view.
   const tabs = [...document.querySelectorAll(".tab")];

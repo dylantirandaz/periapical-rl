@@ -179,3 +179,16 @@ table.data .num { text-align: right; font-variant-numeric: tabular-nums; }
   .kv dt { margin-top: 10px; }
   .site-footer .container { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Print: white paper, black text, no tie-dye or glass, no header, footer, hero animation or controls. */
+@media print {
+  html, body { background: #fff !important; color: #111 !important; }
+  body::before, .site-header, .site-footer, .skip-link, .tabs, .segments, .pv-toolbar, .pv-menu, select, button { display: none !important; }
+  :root { --ink: #111; --ink-strong: #000; --ink-soft: #222; --muted: #444; --muted-2: #555; --faint: #777; --line: #bbb; --line-soft: #ddd; --line-strong: #999; --glass: transparent; --glass-line: #ccc; --surface: #fff; }
+  section.block, .pv, .stage-caption { background: none !important; border-color: #ccc !important; backdrop-filter: none !important; break-inside: avoid; }
+  .container { width: 100%; }
+  .stage { aspect-ratio: auto; max-height: 45vh; }
+  a { border-bottom: 0; }
+  .pv { display: block; height: auto; }
+  .pv-films, .pv-list, .pv-messages, .pv-scroll { height: auto !important; max-height: none !important; overflow: visible !important; }
+}
