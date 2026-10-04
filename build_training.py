@@ -66,11 +66,17 @@ def main(sft_dir: Path, rl_dir: Path, output: Path) -> None:
     rl_points, rl_rows = phase(rl_dir, sft_points[-1]["step"])
     if [row["film"] for row in sft_rows[0]] != [row["film"] for row in rl_rows[0]]:
         raise SystemExit("the two runs validated on different films")
+    # The fine-tuning run's last checkpoint and the RL run's first are the same weights, measured twice with
+    # sampled answers about one standard error apart. Pool both measurements into one junction point instead of
+    # drawing two points at the same step.
+    junction = {"step": sft_points[-1]["step"], **evaluate(sft_rows[-1] + rl_rows[0])}
+    sft_points[-1] = junction
+    rl_points[0] = junction
     paired = [score(late, late["boxes"], late["pai"]) - score(early, early["boxes"], early["pai"])
               for early, late in zip(rl_rows[0], rl_rows[-1])]
     ladder = [
         {"label": "untrained", "score": sft_points[0]["score"]},
-        {"label": "fine-tuned", "score": rl_points[0]["score"]},
+        {"label": "fine-tuned", "score": junction["score"]},
         {"label": "+ RL", "score": rl_points[-1]["score"]},
     ]
     output.write_text(json.dumps({

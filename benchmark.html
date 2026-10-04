@@ -442,13 +442,13 @@
     parts.push(svg("polyline", { points: points.map((point) => `${x(point.step)},${y(point.shuffled)}`).join(" "), class: "shuffled" }));
     for (const [index, phase] of data.phases.entries()) {
       const kind = phase.name === "+ RL" ? "rl" : "sft";
-      const next = data.phases[index + 1];  // the fine-tune line ends where the RL line starts, so the two touch
-      const linePoints = next ? [...phase.points, { step: next.points[0].step, score: next.points[0].score }] : phase.points;
       const upper = phase.points.map((point) => `${x(point.step)},${y(point.ci95[1])}`);
       const lower = phase.points.map((point) => `${x(point.step)},${y(point.ci95[0])}`).reverse();
       parts.push(svg("polygon", { points: [...upper, ...lower].join(" "), class: `band ${kind}` }));
-      parts.push(svg("polyline", { points: linePoints.map((point) => `${x(point.step)},${y(point.score)}`).join(" "), class: `line ${kind}` }));
-      for (const point of phase.points) parts.push(svg("circle", { cx: x(point.step), cy: y(point.score), r: 3, class: `dot ${kind}` }));
+      parts.push(svg("polyline", { points: phase.points.map((point) => `${x(point.step)},${y(point.score)}`).join(" "), class: `line ${kind}` }));
+      // Both phases share the pooled junction point; the green dot marks it, so the RL phase skips its first.
+      const dots = index === 0 ? phase.points : phase.points.slice(1);
+      for (const point of dots) parts.push(svg("circle", { cx: x(point.step), cy: y(point.score), r: 3, class: `dot ${kind}` }));
     }
     chart.replaceChildren(...parts);
   }
