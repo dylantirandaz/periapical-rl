@@ -14,7 +14,7 @@
   --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   /* Surfaces and text, dark to light. The page and text values follow The Human Project. */
-  --bg: #121212; --surface: #171717; --surface-2: #1d1d1e;
+  --bg: #000; --surface: #171717; --surface-2: #1d1d1e;
   --line-soft: #1f2021; --line: #2a2b2c; --line-strong: #3b3d3e;
   --faint: #5f5f63; --muted-2: #7c7c80; --muted: #949494;
   --ink-soft: #b4b4b4; --ink: #c8c8c8; --ink-strong: #ececec;
@@ -28,8 +28,8 @@
   --mid-ink: #e7b45a; --mid-wash: rgba(245, 158, 11, 0.10); --mid-edge: rgba(245, 158, 11, 0.35);
   --fail-ink: #f08a8a; --fail-wash: rgba(239, 68, 68, 0.10); --fail-edge: rgba(239, 68, 68, 0.35);
 
-  /* Frosted glass: panels that carry text sit on this dark, blurred layer, so the smoke stays vivid between them. */
-  --glass: rgba(12, 12, 16, 0.78); --glass-line: rgba(255, 255, 255, 0.09);
+  /* Frosted glass: panels that carry text sit on this dark, blurred layer, so text keeps its contrast over the tie-dye. */
+  --glass: rgba(16, 16, 20, 0.7); --glass-line: rgba(255, 255, 255, 0.09);
 
   /* Boxes drawn on radiographs: dentists and model. */
   --box-dentist: #8fc7ff; --box-model: #ffae6b; --film: #000;
@@ -41,15 +41,13 @@ html { background: var(--bg); -webkit-font-smoothing: antialiased; -moz-osx-font
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 body { margin: 0; color: var(--ink); font: 300 16px/25px var(--serif); font-feature-settings: "kern" 1, "liga" 1; }
 
-/* Smoke: one picture (built by build_smoke.py) in two fixed layers behind the page. The second is mirrored,
-   lighter, and drifts the other way, so the two slowly weave. html carries the page colour so these show. */
-body::before, body::after { content: ""; position: fixed; inset: -10%; z-index: -1; pointer-events: none; background: url("assets/smoke.webp") center / cover; }
-body::before { opacity: 0.9; animation: smoke-a 150s ease-in-out infinite alternate; }
-body::after { opacity: 0.5; mix-blend-mode: screen; transform: scaleX(-1); animation: smoke-b 210s ease-in-out infinite alternate; }
-@keyframes smoke-a { from { transform: translate3d(-3%, -2%, 0) scale(1.02) rotate(0deg); } to { transform: translate3d(3%, 2%, 0) scale(1.1) rotate(3deg); } }
-@keyframes smoke-b { from { transform: scaleX(-1) translate3d(3%, 2%, 0) scale(1.1) rotate(-2deg); } to { transform: scaleX(-1) translate3d(-3%, -2%, 0) scale(1.02) rotate(2deg); } }
-@media (prefers-reduced-motion: reduce) { body::before, body::after { animation: none; } }
-@media (max-width: 700px) { body::after { display: none; } }
+/* Tie-dye: one very faint picture (built by build_tiedye.py; a portrait one for tall screens) in a fixed layer
+   behind the page, drifting slowly. html carries the black page colour so the layer shows. */
+body::before { content: ""; position: fixed; inset: -6%; z-index: -1; pointer-events: none; background: url("assets/tiedye.webp") center / cover; animation: tiedye-drift 240s ease-in-out infinite alternate; }
+@keyframes tiedye-drift { from { transform: translate3d(-1.5%, -1%, 0) scale(1.02); } to { transform: translate3d(1.5%, 1%, 0) scale(1.07); } }
+@media (orientation: portrait) { body::before { background-image: url("assets/tiedye-portrait.webp"); } }
+@media (prefers-reduced-motion: reduce) { body::before { animation: none; } }
+
 a { color: inherit; text-decoration: none; border-bottom: 1px solid var(--line-strong); }
 a:hover { border-bottom-color: var(--ink); }
 a:focus-visible, summary:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-radius: 2px; }
@@ -61,7 +59,7 @@ button, input, select { font: inherit; }
 .skip-link:focus { top: 0.75rem; }
 
 /* Header: wordmark, mono links, hairline once the page scrolls. */
-.site-header { position: sticky; top: 0; z-index: 20; background: rgba(18, 18, 18, 0.55); backdrop-filter: blur(14px); border-bottom: 1px solid transparent; }
+.site-header { position: sticky; top: 0; z-index: 20; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(14px); border-bottom: 1px solid transparent; }
 .site-header[data-scrolled] { border-bottom-color: var(--line); }
 .site-header .container { display: flex; align-items: center; justify-content: space-between; gap: 1rem; height: 54px; }
 .brand { font: 400 23px/1 var(--display); letter-spacing: 0; white-space: nowrap; border: 0; color: var(--ink-strong); }
