@@ -25,10 +25,7 @@
   .bar-value { font: 400 12px/16px var(--mono); color: var(--provider, var(--ink)); font-variant-numeric: tabular-nums; }
   .bar-track { position: relative; display: flex; align-items: center; height: 26px; }
   .bar-fill { display: block; height: 10px; min-width: 2px; border-radius: 999px; background: var(--provider, var(--faint)); }
-  .whisker { position: absolute; top: 50%; height: 0; border-top: 1px solid var(--muted); }
-  .whisker::before, .whisker::after { content: ""; position: absolute; top: -3px; height: 6px; border-left: 1px solid var(--muted); }
-  .whisker::before { left: 0; }
-  .whisker::after { right: 0; }
+  .ci { position: absolute; top: 50%; height: 18px; transform: translateY(-50%); border: 1.5px solid rgba(236, 236, 236, 0.9); border-radius: 3px; background: rgba(8, 8, 8, 0.45); pointer-events: none; }
   .bar-label { justify-self: end; max-width: 100%; padding-left: 14px; text-align: right; border: 0; }
   .bar-label:hover .bar-name { text-decoration: underline; text-underline-offset: 3px; }
   .bar-name { display: block; font: 400 12px/13px var(--mono); color: var(--ink-strong); overflow-wrap: anywhere; }
@@ -96,7 +93,7 @@
 
   <section class="block" id="leaderboard" aria-labelledby="leaderboard-title" style="margin-top: 28px;">
     <h2 class="section-title" id="leaderboard-title">Leaderboard</h2>
-    <p class="section-sub">Score per film from 0 to 1, averaged over 200 films. Partial credit counts. Whiskers: 95% interval.</p>
+    <p class="section-sub">Score per film from 0 to 1, averaged over 200 films. Partial credit counts. Box: 95% interval.</p>
     <div class="bars" id="bars" aria-live="polite">
       <div class="bars-rows" id="bars-rows" role="list"></div>
       <div class="axis" aria-hidden="true"><div>score</div><div class="ticks"><span style="left:0%">0</span><span style="left:25%">0.25</span><span style="left:50%">0.5</span><span style="left:75%">0.75</span><span style="left:100%">1</span></div><div></div></div>
@@ -110,7 +107,6 @@
       <div class="unfinished-list" id="unfinished-rows" role="list"></div>
     </div>
     <p class="mono-note" id="benchmark-status" role="status" style="margin-top: 18px;"></p>
-    <p class="mono-note" id="route-note" hidden style="margin-top: 6px;"></p>
     <noscript><p class="note">Enable JavaScript to load the leaderboard. <a href="data/benchmarks.json">Read the data</a>.</p></noscript>
   </section>
 
@@ -174,7 +170,6 @@
   const HARNESSES = { claude_code: "Claude Code", codex: "Codex" };
   // Two dentists scoring each other on 59 films read twice.
   const DENTISTS_SCORE = 0.83;
-  const PLAIN_ROUTES = ["Prime Inference", "Tinker Anthropic-compatible API"];
   const SVG_NS = "http://www.w3.org/2000/svg";
 
   const $ = (id) => document.getElementById(id);
@@ -308,10 +303,10 @@
     track.append(fill);
     const range = interval(entry.mean_reward_ci95);
     if (range && range[1] > range[0]) {
-      const whisker = el("span", undefined, "whisker");
-      whisker.style.left = `${range[0] * 100}%`;
-      whisker.style.width = `${(range[1] - range[0]) * 100}%`;
-      track.append(whisker);
+      const band = el("span", undefined, "ci");
+      band.style.left = `${range[0] * 100}%`;
+      band.style.width = `${(range[1] - range[0]) * 100}%`;
+      track.append(band);
     }
     const label = el("a", undefined, "bar-label");
     label.href = `traces.html?run=${encodeURIComponent(entry.id)}`;
@@ -382,9 +377,6 @@
       $("unfinished").hidden = false;
       $("unfinished-rows").replaceChildren(...unfinished.map(unfinishedRow));
     }
-    const adapted = entries.filter((entry) => entry.route && !PLAIN_ROUTES.includes(entry.route));
-    $("route-note").hidden = !adapted.length;
-    $("route-note").textContent = adapted.map((entry) => `${entry.name}: ${entry.route}`).join(" · ");
     $("benchmark-status").textContent = entries.length ? "" : "No benchmark entries published.";
 
     $("footer-runs").replaceChildren(...[...ranked, ...unfinished].map((entry) => {
