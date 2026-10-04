@@ -21,16 +21,15 @@
   .plot i { position: absolute; top: 0; bottom: 0; border-left: 1px solid var(--line); }
   .plot .ref { border-left: 1px dashed var(--faint); }
   .plot .ref-label { position: absolute; top: -17px; transform: translateX(-50%); font: 400 9px/12px var(--mono); letter-spacing: 0.04em; color: var(--muted-2); white-space: nowrap; }
-  .plot .ref-label.off { left: auto; right: 0; transform: none; }
   .bar-row { position: relative; display: grid; grid-template-columns: var(--value-col) minmax(0, 1fr) var(--label-col); align-items: center; height: 26px; }
   .bar-value { font: 400 12px/16px var(--mono); color: var(--provider, var(--ink)); font-variant-numeric: tabular-nums; }
   .bar-track { position: relative; display: flex; align-items: center; height: 26px; }
-  .bar-fill { display: block; height: 10px; min-width: 2px; border-radius: 999px; background: var(--provider, var(--faint)); }
+  .bar-fill { display: block; height: 12px; min-width: 2px; border-radius: 999px; background: var(--provider, var(--faint)); }
   /* Error bar. The half over the bar is dark and the half beyond it is light, so it reads on every bar colour. */
   .ci { position: absolute; top: 50%; height: 2px; margin-top: -1px; pointer-events: none; }
   .ci-in { background: var(--bg); }
   .ci-out { background: var(--ink-strong); }
-  .ci-in::before, .ci-out::after { content: ""; position: absolute; top: -5px; width: 2px; height: 12px; }
+  .ci-in::before, .ci-out::after { content: ""; position: absolute; top: -7px; width: 2px; height: 16px; }
   .ci-in::before { left: 0; background: var(--bg); }
   .ci-out::after { right: 0; background: var(--ink-strong); }
   .bar-label { justify-self: end; max-width: 100%; padding-left: 14px; text-align: right; border: 0; }
@@ -277,55 +276,42 @@
   }
 
   // ---- Leaderboard
-  // The axis ends just above the highest interval, so bars and error bars are long enough to read.
-  // The dentists' score is far beyond it and appears as an arrow at the right edge.
-  function axisScale(ranked) {
-    const top = Math.max(...ranked.map((entry) => (interval(entry.mean_reward_ci95) ?? [0, entry.mean_reward])[1]));
-    const max = Math.min(1, Math.round(0.05 * Math.ceil(top / 0.05) * 100) / 100);
-    const step = max > 0.5 ? 0.25 : 0.1;
-    const ticks = [];
-    for (let tick = 0; tick <= max + 1e-9; tick += step) ticks.push(Math.round(tick * 100) / 100);
-    return { max, ticks, at: (value) => `${(value / max) * 100}%` };
-  }
+  // The axis is fixed from 0 to 1, the range of a film's score.
+  const AXIS_TICKS = [0, 0.25, 0.5, 0.75, 1];
+  const along = (value) => `${value * 100}%`;
 
-  function plot(scale) {
+  function plot() {
     const overlay = el("div", undefined, "plot");
-    for (const tick of scale.ticks.filter((value) => value > 0 && value < scale.max)) {
+    for (const tick of AXIS_TICKS.slice(1, -1)) {
       const line = el("i");
-      line.style.left = scale.at(tick);
+      line.style.left = along(tick);
       overlay.append(line);
     }
+    const line = el("i", undefined, "ref");
+    line.style.left = along(DENTISTS_SCORE);
     const label = el("span", `dentists ${DENTISTS_SCORE.toFixed(2)}`, "ref-label");
-    if (DENTISTS_SCORE <= scale.max) {
-      const line = el("i", undefined, "ref");
-      line.style.left = scale.at(DENTISTS_SCORE);
-      label.style.left = line.style.left;
-      overlay.append(line);
-    } else {
-      label.textContent += " →";
-      label.classList.add("off");
-    }
-    overlay.append(label);
+    label.style.left = along(DENTISTS_SCORE);
+    overlay.append(line, label);
     return overlay;
   }
 
-  function barRow(entry, scale) {
+  function barRow(entry) {
     const who = provider(entry);
     const row = el("div", undefined, "bar-row");
     row.setAttribute("role", "listitem");
     row.style.setProperty("--provider", who.color);
     const track = el("div", undefined, "bar-track");
     const fill = el("span", undefined, "bar-fill");
-    fill.style.width = scale.at(entry.mean_reward);
+    fill.style.width = along(entry.mean_reward);
     track.append(fill);
     const range = interval(entry.mean_reward_ci95);
     if (range && range[1] > range[0]) {
       const inside = el("span", undefined, "ci ci-in");
-      inside.style.left = scale.at(range[0]);
-      inside.style.width = scale.at(entry.mean_reward - range[0]);
+      inside.style.left = along(range[0]);
+      inside.style.width = along(entry.mean_reward - range[0]);
       const outside = el("span", undefined, "ci ci-out");
-      outside.style.left = scale.at(entry.mean_reward);
-      outside.style.width = scale.at(range[1] - entry.mean_reward);
+      outside.style.left = along(entry.mean_reward);
+      outside.style.width = along(range[1] - entry.mean_reward);
       track.append(inside, outside);
     }
     const label = el("a", undefined, "bar-label");
@@ -369,11 +355,10 @@
       rows.append(el("p", "No run is complete yet.", "note"));
       return;
     }
-    const scale = axisScale(ranked);
-    rows.append(plot(scale), ...ranked.map((entry) => barRow(entry, scale)));
-    $("bars").querySelector(".ticks").replaceChildren(...scale.ticks.map((tick) => {
-      const span = el("span", String(tick));
-      span.style.left = scale.at(tick);
+    rows.append(plot(), ...ranked.map((entry) => barRow(entry)));
+    $("bars").querySelector(".ticks").replaceChildren(...AXIS_TICKS.map((tick) => {
+      const span = el("span", Number.isInteger(tick) ? tick.toFixed(1) : String(tick));
+      span.style.left = along(tick);
       return span;
     }));
   }
