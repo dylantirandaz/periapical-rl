@@ -51,6 +51,16 @@
   .chart .grid { stroke: var(--line-soft); stroke-width: 1; }
   .chart .frame { fill: none; stroke: var(--line); stroke-width: 1; }
   .chart .tick { font: 400 11px var(--mono); fill: var(--muted-2); }
+  .chart .band { fill: var(--thinking-machines); fill-opacity: 0.16; stroke: none; }
+  .chart .real { fill: none; stroke: var(--thinking-machines); stroke-width: 2; }
+  .chart .dot { fill: var(--thinking-machines); }
+  .chart .shuffled { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 5 4; }
+  .ladder { display: grid; grid-template-columns: auto auto auto; justify-content: start; align-items: end; gap: 0 clamp(26px, 6vw, 64px); margin-top: 28px; }
+  .rung { position: relative; }
+  .rung + .rung::before { content: "→"; position: absolute; left: calc(-1 * clamp(26px, 6vw, 64px) / 2 - 0.4em); bottom: 0.2em; font: 300 clamp(20px, 5vw, 32px)/1 var(--display); color: var(--faint); }
+  .rung-label { display: block; margin-bottom: 6px; font: 400 11px/16px var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted-2); }
+  .rung-score { display: block; font: 400 clamp(34px, 9vw, 60px)/1 var(--display); letter-spacing: -0.01em; color: var(--ink-strong); }
+  .rung:last-child .rung-score { color: var(--thinking-machines); }
 
   @media (max-width: 860px) { .rl { grid-template-columns: minmax(0, 1fr); } }
   @media (max-width: 640px) {
@@ -113,10 +123,15 @@
   <section class="block" id="post-training" aria-labelledby="training-title">
     <h2 class="section-title" id="training-title">Post-training</h2>
     <p class="section-sub">A separate study. Inkling-Small, six tiled calls, no tools.</p>
+    <div class="ladder" id="ladder" aria-label="Validation score before training, after fine-tuning and after RL"></div>
+    <p class="mono-note" id="ladder-note" style="margin-top: 10px;"></p>
     <div class="rl">
       <figure style="margin:0; min-width:0;">
-        <svg class="chart" viewBox="0 0 640 360" role="img" aria-label="validation score by RL step"><line x1="56" y1="320.0" x2="620" y2="320.0" class="grid"/><text x="48" y="324.0" class="tick" text-anchor="end">0.00</text><line x1="56" y1="271.0" x2="620" y2="271.0" class="grid"/><text x="48" y="275.0" class="tick" text-anchor="end">0.05</text><line x1="56" y1="222.0" x2="620" y2="222.0" class="grid"/><text x="48" y="226.0" class="tick" text-anchor="end">0.10</text><line x1="56" y1="173.0" x2="620" y2="173.0" class="grid"/><text x="48" y="177.0" class="tick" text-anchor="end">0.15</text><line x1="56" y1="124.0" x2="620" y2="124.0" class="grid"/><text x="48" y="128.0" class="tick" text-anchor="end">0.20</text><line x1="56" y1="75.0" x2="620" y2="75.0" class="grid"/><text x="48" y="79.0" class="tick" text-anchor="end">0.25</text><line x1="56" y1="26.0" x2="620" y2="26.0" class="grid"/><text x="48" y="30.0" class="tick" text-anchor="end">0.30</text><line x1="56.0" y1="26" x2="56.0" y2="320" class="grid"/><text x="56.0" y="338" class="tick" text-anchor="middle">0</text><line x1="150.0" y1="26" x2="150.0" y2="320" class="grid"/><text x="150.0" y="338" class="tick" text-anchor="middle">15</text><line x1="244.0" y1="26" x2="244.0" y2="320" class="grid"/><text x="244.0" y="338" class="tick" text-anchor="middle">30</text><line x1="338.0" y1="26" x2="338.0" y2="320" class="grid"/><text x="338.0" y="338" class="tick" text-anchor="middle">45</text><line x1="432.0" y1="26" x2="432.0" y2="320" class="grid"/><text x="432.0" y="338" class="tick" text-anchor="middle">60</text><line x1="526.0" y1="26" x2="526.0" y2="320" class="grid"/><text x="526.0" y="338" class="tick" text-anchor="middle">75</text><line x1="620.0" y1="26" x2="620.0" y2="320" class="grid"/><text x="620.0" y="338" class="tick" text-anchor="middle">90</text><text x="338.0" y="354" class="tick" text-anchor="middle">RL step</text><rect x="56" y="26" width="564" height="294" class="frame"/><path d="M56.0,189.6 118.7,193.9 181.3,159.5 244.0,175.5 306.7,104.2 369.3,92.6 432.0,112.5 494.7,111.3 557.3,104.0 620.0,96.3" fill="none" stroke="var(--thinking-machines)" stroke-width="2"/><circle cx="56.0" cy="189.6" r="3" fill="var(--thinking-machines)"/><circle cx="118.7" cy="193.9" r="3" fill="var(--thinking-machines)"/><circle cx="181.3" cy="159.5" r="3" fill="var(--thinking-machines)"/><circle cx="244.0" cy="175.5" r="3" fill="var(--thinking-machines)"/><circle cx="306.7" cy="104.2" r="3" fill="var(--thinking-machines)"/><circle cx="369.3" cy="92.6" r="3" fill="var(--thinking-machines)"/><circle cx="432.0" cy="112.5" r="3" fill="var(--thinking-machines)"/><circle cx="494.7" cy="111.3" r="3" fill="var(--thinking-machines)"/><circle cx="557.3" cy="104.0" r="3" fill="var(--thinking-machines)"/><circle cx="620.0" cy="96.3" r="3" fill="var(--thinking-machines)"/></svg>
-        <p class="mono-note" style="margin-top:8px;">Validation score by RL step · 128 films</p>
+        <svg class="chart" id="rl-chart" viewBox="0 0 640 360" role="img" aria-label="Validation score by RL step"></svg>
+        <div class="legend" style="margin-top: 8px;">
+          <span><i style="--dot: var(--thinking-machines)"></i>real labels</span>
+          <span><i class="box dashed" style="--dot: var(--muted); height: 0; border-width: 0 0 1.5px 0; width: 18px;"></i>other films' labels</span>
+        </div>
       </figure>
       <div style="min-width:0;">
         <p class="eyebrow">Test split · 387 films</p>
@@ -393,6 +408,52 @@
     $("benchmark-status").textContent = `Cannot load benchmark data: ${error.message}.`;
   });
   loadHero().catch((error) => console.error(`Hero films unavailable: ${error.message}`));
+
+  // ---- Post-training: the ladder and the validation curve.
+  async function loadRl() {
+    const response = await fetch("assets/rl.json", { cache: "no-store" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    const three = (value) => value.toFixed(3);
+    $("ladder").replaceChildren(...data.ladder.map((rung) => {
+      const item = el("div", undefined, "rung");
+      item.append(el("span", rung.label, "rung-label"), el("span", three(rung.score), "rung-score"));
+      return item;
+    }));
+    const gain = data.rl_gain;
+    $("ladder-note").textContent = `Validation, ${data.films} films, same scoring as the leaderboard · RL gain ${gain.mean >= 0 ? "+" : ""}${three(gain.mean)} (95% interval ${three(gain.ci95[0])} to ${three(gain.ci95[1])})`;
+
+    const [left, right, top, bottom] = [56, 620, 26, 320];
+    const yMax = 0.05 * Math.ceil(Math.max(...data.curve.map((point) => point.ci95[1])) / 0.05);
+    const xMax = Math.max(...data.curve.map((point) => point.step));
+    const x = (step) => left + (step / xMax) * (right - left);
+    const y = (value) => bottom - (value / yMax) * (bottom - top);
+    const chart = $("rl-chart");
+    const parts = [];
+    for (let value = 0; value <= yMax + 1e-9; value += 0.05) {
+      parts.push(svg("line", { x1: left, y1: y(value), x2: right, y2: y(value), class: "grid" }));
+      const label = svg("text", { x: left - 8, y: y(value) + 4, class: "tick", "text-anchor": "end" });
+      label.textContent = value.toFixed(2);
+      parts.push(label);
+    }
+    for (let step = 0; step <= xMax; step += 30) {
+      parts.push(svg("line", { x1: x(step), y1: top, x2: x(step), y2: bottom, class: "grid" }));
+      const label = svg("text", { x: x(step), y: bottom + 18, class: "tick", "text-anchor": "middle" });
+      label.textContent = String(step);
+      parts.push(label);
+    }
+    const axis = svg("text", { x: (left + right) / 2, y: bottom + 34, class: "tick", "text-anchor": "middle" });
+    axis.textContent = "RL step";
+    parts.push(axis, svg("rect", { x: left, y: top, width: right - left, height: bottom - top, class: "frame" }));
+    const upper = data.curve.map((point) => `${x(point.step)},${y(point.ci95[1])}`);
+    const lower = data.curve.map((point) => `${x(point.step)},${y(point.ci95[0])}`).reverse();
+    parts.push(svg("polygon", { points: [...upper, ...lower].join(" "), class: "band" }));
+    parts.push(svg("polyline", { points: data.curve.map((point) => `${x(point.step)},${y(point.shuffled)}`).join(" "), class: "shuffled" }));
+    parts.push(svg("polyline", { points: data.curve.map((point) => `${x(point.step)},${y(point.score)}`).join(" "), class: "real" }));
+    for (const point of data.curve) parts.push(svg("circle", { cx: x(point.step), cy: y(point.score), r: 3, class: "dot" }));
+    chart.replaceChildren(...parts);
+  }
+  loadRl().catch((error) => console.error(`Post-training data unavailable: ${error.message}`));
 
   // Underline the tab of the section in view.
   const tabs = [...document.querySelectorAll(".tab")];
