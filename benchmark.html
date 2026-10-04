@@ -21,11 +21,18 @@
   .plot i { position: absolute; top: 0; bottom: 0; border-left: 1px solid var(--line); }
   .plot .ref { border-left: 1px dashed var(--faint); }
   .plot .ref-label { position: absolute; top: -17px; transform: translateX(-50%); font: 400 9px/12px var(--mono); letter-spacing: 0.04em; color: var(--muted-2); white-space: nowrap; }
+  .plot .ref-label.off { left: auto; right: 0; transform: none; }
   .bar-row { position: relative; display: grid; grid-template-columns: var(--value-col) minmax(0, 1fr) var(--label-col); align-items: center; height: 26px; }
   .bar-value { font: 400 12px/16px var(--mono); color: var(--provider, var(--ink)); font-variant-numeric: tabular-nums; }
   .bar-track { position: relative; display: flex; align-items: center; height: 26px; }
   .bar-fill { display: block; height: 10px; min-width: 2px; border-radius: 999px; background: var(--provider, var(--faint)); }
-  .ci { position: absolute; top: 50%; height: 18px; transform: translateY(-50%); border: 1.5px solid rgba(236, 236, 236, 0.9); border-radius: 3px; background: rgba(8, 8, 8, 0.45); pointer-events: none; }
+  /* Error bar. The half over the bar is dark and the half beyond it is light, so it reads on every bar colour. */
+  .ci { position: absolute; top: 50%; height: 2px; margin-top: -1px; pointer-events: none; }
+  .ci-in { background: var(--bg); }
+  .ci-out { background: var(--ink-strong); }
+  .ci-in::before, .ci-out::after { content: ""; position: absolute; top: -5px; width: 2px; height: 12px; }
+  .ci-in::before { left: 0; background: var(--bg); }
+  .ci-out::after { right: 0; background: var(--ink-strong); }
   .bar-label { justify-self: end; max-width: 100%; padding-left: 14px; text-align: right; border: 0; }
   .bar-label:hover .bar-name { text-decoration: underline; text-underline-offset: 3px; }
   .bar-name { display: block; font: 400 12px/13px var(--mono); color: var(--ink-strong); overflow-wrap: anywhere; }
@@ -33,7 +40,6 @@
   .axis { display: grid; grid-template-columns: var(--value-col) minmax(0, 1fr) var(--label-col); margin-top: 10px; font: 400 10px/14px var(--mono); color: var(--muted-2); }
   .axis .ticks { position: relative; height: 14px; }
   .axis .ticks span { position: absolute; transform: translateX(-50%); }
-  .bars-foot { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.5rem 1.5rem; margin-top: 22px; }
   .unfinished { margin-top: 40px; padding-top: 22px; border-top: 1px solid var(--line-soft); }
   .unfinished-list { display: grid; gap: 16px; margin-top: 16px; }
   .unfinished-item { display: grid; grid-template-columns: 56px minmax(0, 1fr); align-items: baseline; }
@@ -66,7 +72,8 @@
   @media (max-width: 640px) {
     .bars { --value-col: 48px; --label-col: 108px; }
     .bar-label { padding-left: 8px; }
-    .bar-name { font-size: 11px; }
+    .bar-name { font-size: 11px; line-height: 12px; }
+    .bar-row, .bar-track { height: 32px; }
     .chart .tick { font-size: 19px; }
     .section-title { font-size: 26px; }
   }
@@ -103,14 +110,10 @@
 
   <section class="block" id="leaderboard" aria-labelledby="leaderboard-title" style="margin-top: 28px;">
     <h2 class="section-title" id="leaderboard-title">Leaderboard</h2>
-    <p class="section-sub">Score per film from 0 to 1, averaged over 200 films. Partial credit counts. Box: 95% interval.</p>
+    <p class="section-sub">Mean score, 200 films. Error bars: 95% interval.</p>
     <div class="bars" id="bars" aria-live="polite">
       <div class="bars-rows" id="bars-rows" role="list"></div>
-      <div class="axis" aria-hidden="true"><div>score</div><div class="ticks"><span style="left:0%">0</span><span style="left:25%">0.25</span><span style="left:50%">0.5</span><span style="left:75%">0.75</span><span style="left:100%">1</span></div><div></div></div>
-    </div>
-    <div class="bars-foot">
-      <span class="mono-note" id="bars-count">Loading…</span>
-      <div class="legend" id="legend"></div>
+      <div class="axis" aria-hidden="true"><div>score</div><div class="ticks"></div><div></div></div>
     </div>
     <div class="unfinished" id="unfinished" hidden>
       <p class="eyebrow">Unfinished · not ranked</p>
@@ -122,24 +125,17 @@
 
   <section class="block" id="post-training" aria-labelledby="training-title">
     <h2 class="section-title" id="training-title">Post-training</h2>
-    <p class="section-sub">A separate study. Inkling-Small, six tiled calls, no tools.</p>
     <div class="ladder" id="ladder" aria-label="Validation score before training, after fine-tuning and after RL"></div>
     <p class="mono-note" id="ladder-note" style="margin-top: 10px;"></p>
     <div class="rl">
       <figure style="margin:0; min-width:0;">
         <svg class="chart" id="rl-chart" viewBox="0 0 640 360" role="img" aria-label="Validation score by RL step"></svg>
-        <div class="legend" style="margin-top: 8px;">
-          <span><i style="--dot: var(--thinking-machines)"></i>real labels</span>
-          <span><i class="box dashed" style="--dot: var(--muted); height: 0; border-width: 0 0 1.5px 0; width: 18px;"></i>other films' labels</span>
-        </div>
       </figure>
       <div style="min-width:0;">
-        <p class="eyebrow">Test split · 387 films</p>
+        <p class="eyebrow">Test · 387 films</p>
         <div class="scroll" style="margin-top:8px;"><table class="data">
-          <thead><tr><th>Checkpoint</th><th class="num">Score</th></tr></thead>
-          <tbody><tr><td>fine-tuned</td><td class="num">0.12</td></tr><tr><td>+ RL, step 50</td><td class="num">0.18</td></tr></tbody>
+          <tbody><tr><td>fine-tuned</td><td class="num">0.12</td></tr><tr title="+0.06, 95% interval 0.03 to 0.08"><td>+ RL</td><td class="num">0.18</td></tr></tbody>
         </table></div>
-        <p class="mono-note" style="margin-top:12px;">+0.06 score · 95% interval 0.03 to 0.08</p>
       </div>
     </div>
   </section>
@@ -147,13 +143,11 @@
   <section class="block" id="method" aria-labelledby="method-title">
     <h2 class="section-title" id="method-title">Method</h2>
     <dl class="kv" style="margin-top: 22px;">
-      <dt>Task</dt><dd>Find each lesion, box it, grade it PAI 3, 4 or 5.</dd>
-      <dt>Score</dt><dd>Per film, ½ lesion F1 + ½ graded F1, so 0 to 1. Boxes match at IoU ≥ 0.3. Extra boxes cost.</dd>
-      <dt>Average</dt><dd>The leaderboard shows the mean over 200 films. Two dentists scoring each other: 0.83.</dd>
-      <dt>Agents</dt><dd>Codex 0.147.0 and Claude Code 2.1.280. Python and image tools, 50 turns, no network.</dd>
-      <dt>Films</dt><dd>First 200 of 387 test films. One scored attempt each.</dd>
-      <dt>Re-runs</dt><dd>Sandbox and network faults are re-run. The turn limit is not.</dd>
-      <dt>Traces</dt><dd><a href="traces.html">Every message, tool call and image.</a></dd>
+      <dt>Task</dt><dd>Box each lesion, grade it PAI 3–5.</dd>
+      <dt>Score</dt><dd>½ lesion F1 + ½ graded F1, IoU ≥ 0.3</dd>
+      <dt>Agents</dt><dd>Codex (GPT-6 Astra), Claude Code (others), 50 turns</dd>
+      <dt>Films</dt><dd>First 200 of 387 test films, one try</dd>
+      <dt>Dentists</dt><dd>0.83, two annotators on 59 films</dd>
     </dl>
   </section>
 </main>
@@ -161,13 +155,9 @@
 <footer class="site-footer"><div class="container">
   <div>
     <a class="brand" href="benchmark.html"><b>PanoRead</b><span>.periapical</span></a>
-    <p class="footer-label">Runs</p>
-    <ul class="footer-links footer-runs" id="footer-runs"><li><a href="traces.html">All runs</a></li></ul>
-    <p class="footer-label">Data</p>
-    <ul class="footer-links"><li><a href="https://huggingface.co/datasets/tirandazdylan/periapical-lesions-pai">Dataset</a></li></ul>
   </div>
   <div class="footer-aside">
-    <p>Films: Do et al. 2024, CC BY 4.0.</p>
+    <p><a href="https://huggingface.co/datasets/tirandazdylan/periapical-lesions-pai">Dataset</a> · Films: Do et al. 2024, CC BY 4.0</p>
   </div>
 </div></footer>
 
@@ -277,12 +267,7 @@
       });
       const item = items[index];
       const [tone, word] = heroOutcome(item.model.reward);
-      facts.replaceChildren(
-        el("span", `film ${item.film}`),
-        el("span", `dentists PAI ${item.dentists.map((d) => d.pai).join(", ")}`),
-        el("span", `${item.model.name} PAI ${item.model.lesions.map((l) => l.pai).join(", ") || "none"}`),
-        el("span", word, `status-pill ${tone}`),
-      );
+      facts.replaceChildren(el("span", item.film), el("span", word, `status-pill ${tone}`));
     }
     // The fill animation on the active segment ends: go to the next film.
     segments.addEventListener("animationend", (event) => { if (event.animationName === "fill") show((current + 1) % items.length); });
@@ -292,40 +277,60 @@
   }
 
   // ---- Leaderboard
-  function plot() {
+  // The axis ends just above the highest interval, so bars and error bars are long enough to read.
+  // The dentists' score is far beyond it and appears as an arrow at the right edge.
+  function axisScale(ranked) {
+    const top = Math.max(...ranked.map((entry) => (interval(entry.mean_reward_ci95) ?? [0, entry.mean_reward])[1]));
+    const max = Math.min(1, Math.round(0.05 * Math.ceil(top / 0.05) * 100) / 100);
+    const step = max > 0.5 ? 0.25 : 0.1;
+    const ticks = [];
+    for (let tick = 0; tick <= max + 1e-9; tick += step) ticks.push(Math.round(tick * 100) / 100);
+    return { max, ticks, at: (value) => `${(value / max) * 100}%` };
+  }
+
+  function plot(scale) {
     const overlay = el("div", undefined, "plot");
-    for (const left of [0, 25, 50, 75]) {
+    for (const tick of scale.ticks.filter((value) => value > 0 && value < scale.max)) {
       const line = el("i");
-      line.style.left = `${left}%`;
+      line.style.left = scale.at(tick);
       overlay.append(line);
     }
-    const line = el("i", undefined, "ref");
-    line.style.left = `${DENTISTS_SCORE * 100}%`;
     const label = el("span", `dentists ${DENTISTS_SCORE.toFixed(2)}`, "ref-label");
-    label.style.left = `${DENTISTS_SCORE * 100}%`;
-    overlay.append(line, label);
+    if (DENTISTS_SCORE <= scale.max) {
+      const line = el("i", undefined, "ref");
+      line.style.left = scale.at(DENTISTS_SCORE);
+      label.style.left = line.style.left;
+      overlay.append(line);
+    } else {
+      label.textContent += " →";
+      label.classList.add("off");
+    }
+    overlay.append(label);
     return overlay;
   }
 
-  function barRow(entry) {
+  function barRow(entry, scale) {
     const who = provider(entry);
     const row = el("div", undefined, "bar-row");
     row.setAttribute("role", "listitem");
     row.style.setProperty("--provider", who.color);
     const track = el("div", undefined, "bar-track");
     const fill = el("span", undefined, "bar-fill");
-    fill.style.width = `${entry.mean_reward * 100}%`;
+    fill.style.width = scale.at(entry.mean_reward);
     track.append(fill);
     const range = interval(entry.mean_reward_ci95);
     if (range && range[1] > range[0]) {
-      const band = el("span", undefined, "ci");
-      band.style.left = `${range[0] * 100}%`;
-      band.style.width = `${(range[1] - range[0]) * 100}%`;
-      track.append(band);
+      const inside = el("span", undefined, "ci ci-in");
+      inside.style.left = scale.at(range[0]);
+      inside.style.width = scale.at(entry.mean_reward - range[0]);
+      const outside = el("span", undefined, "ci ci-out");
+      outside.style.left = scale.at(entry.mean_reward);
+      outside.style.width = scale.at(range[1] - entry.mean_reward);
+      track.append(inside, outside);
     }
     const label = el("a", undefined, "bar-label");
     label.href = `traces.html?run=${encodeURIComponent(entry.id)}`;
-    label.append(el("span", entry.name, "bar-name"), el("span", harness(entry), "bar-harness"));
+    label.append(el("span", entry.name, "bar-name"));
     const films = entry.outcomes;
     row.title = [
       `${entry.name} · ${harness(entry)} ${entry.harness_version || ""}`.trim(),
@@ -356,25 +361,21 @@
     return item;
   }
 
-  function renderLegend(ranked) {
-    const legend = $("legend");
-    legend.replaceChildren();
-    for (const [name, color] of new Map(ranked.map((entry) => [provider(entry).name, provider(entry).color]))) {
-      const item = el("span");
-      const dot = el("i");
-      dot.style.setProperty("--dot", color);
-      item.append(dot, document.createTextNode(name));
-      legend.append(item);
-    }
-  }
-
   function render(ranked) {
     const rows = $("bars-rows");
     rows.replaceChildren();
-    if (ranked.length) rows.append(plot(), ...ranked.map((entry) => barRow(entry)));
-    else rows.append(el("p", "No run is complete yet.", "note"));
     $("bars").querySelector(".axis").hidden = !ranked.length;
-    renderLegend(ranked);
+    if (!ranked.length) {
+      rows.append(el("p", "No run is complete yet.", "note"));
+      return;
+    }
+    const scale = axisScale(ranked);
+    rows.append(plot(scale), ...ranked.map((entry) => barRow(entry, scale)));
+    $("bars").querySelector(".ticks").replaceChildren(...scale.ticks.map((tick) => {
+      const span = el("span", String(tick));
+      span.style.left = scale.at(tick);
+      return span;
+    }));
   }
 
   async function load() {
@@ -387,24 +388,15 @@
 
     render(ranked);
 
-    $("bars-count").textContent = `${ranked.length} complete · ${unfinished.length} unfinished`;
     if (unfinished.length) {
       $("unfinished").hidden = false;
       $("unfinished-rows").replaceChildren(...unfinished.map(unfinishedRow));
     }
     $("benchmark-status").textContent = entries.length ? "" : "No benchmark entries published.";
 
-    $("footer-runs").replaceChildren(...[...ranked, ...unfinished].map((entry) => {
-      const item = el("li");
-      const link = el("a", entry.name);
-      link.href = `traces.html?run=${encodeURIComponent(entry.id)}`;
-      item.append(link, document.createTextNode(" "), el("span", `· ${harness(entry)}`, "dim"));
-      return item;
-    }));
   }
 
   load().catch((error) => {
-    $("bars-count").textContent = "Leaderboard unavailable";
     $("benchmark-status").textContent = `Cannot load benchmark data: ${error.message}.`;
   });
   loadHero().catch((error) => console.error(`Hero films unavailable: ${error.message}`));
@@ -421,7 +413,8 @@
       return item;
     }));
     const gain = data.rl_gain;
-    $("ladder-note").textContent = `Validation, ${data.films} films, same scoring as the leaderboard · RL gain ${gain.mean >= 0 ? "+" : ""}${three(gain.mean)} (95% interval ${three(gain.ci95[0])} to ${three(gain.ci95[1])})`;
+    $("ladder").lastElementChild.title = `RL gain ${gain.mean >= 0 ? "+" : ""}${three(gain.mean)} (95% interval ${three(gain.ci95[0])} to ${three(gain.ci95[1])})`;
+    $("ladder-note").textContent = `Inkling-Small · ${data.films} validation films`;
 
     const [left, right, top, bottom] = [56, 620, 26, 320];
     const yMax = 0.05 * Math.ceil(Math.max(...data.curve.map((point) => point.ci95[1])) / 0.05);
@@ -432,6 +425,7 @@
     const parts = [];
     for (let value = 0; value <= yMax + 1e-9; value += 0.05) {
       parts.push(svg("line", { x1: left, y1: y(value), x2: right, y2: y(value), class: "grid" }));
+      if (Math.round(value * 100) % 10 !== 0) continue;
       const label = svg("text", { x: left - 8, y: y(value) + 4, class: "tick", "text-anchor": "end" });
       label.textContent = value.toFixed(2);
       parts.push(label);
@@ -449,6 +443,9 @@
     const lower = data.curve.map((point) => `${x(point.step)},${y(point.ci95[0])}`).reverse();
     parts.push(svg("polygon", { points: [...upper, ...lower].join(" "), class: "band" }));
     parts.push(svg("polyline", { points: data.curve.map((point) => `${x(point.step)},${y(point.shuffled)}`).join(" "), class: "shuffled" }));
+    const shuffledLabel = svg("text", { x: right - 6, y: y(data.curve[data.curve.length - 1].shuffled) - 8, class: "tick", "text-anchor": "end" });
+    shuffledLabel.textContent = "shuffled labels";
+    parts.push(shuffledLabel);
     parts.push(svg("polyline", { points: data.curve.map((point) => `${x(point.step)},${y(point.score)}`).join(" "), class: "real" }));
     for (const point of data.curve) parts.push(svg("circle", { cx: x(point.step), cy: y(point.score), r: 3, class: "dot" }));
     chart.replaceChildren(...parts);

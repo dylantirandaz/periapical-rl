@@ -14,7 +14,6 @@
   main > section.block { margin-top: 40px; padding-top: 28px; }
   main > section.block:first-of-type { margin-top: 24px; padding-top: 0; border-top: 0; }
   .caption { font: 400 11px/17px var(--mono); color: var(--muted); overflow-wrap: anywhere; }
-  .tr-caption { overflow-wrap: anywhere; }
   .tr-controls { display: flex; flex-wrap: wrap; gap: 10px 24px; margin-top: 16px; }
   .tr-controls label { display: flex; align-items: center; gap: 8px; max-width: 100%; min-width: 0; }
   .viewer-layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 28px; align-items: start; }
@@ -26,7 +25,6 @@
   .film .empty { color: var(--faint); padding: 48px 24px; font: 400 12px/18px var(--mono); }
   .legend label { display: inline-flex; align-items: center; gap: 6px; }
   .legend .cell { width: 12px; height: 12px; border-radius: 2px; border: 1px solid var(--line); background: transparent; }
-  .tr-label { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
   .grid { display: flex; flex-wrap: wrap; gap: 3px; }
   .cellbtn { width: 24px; height: 24px; border: 1px solid var(--line); border-radius: 3px; padding: 0; cursor: pointer; }
   .cellbtn:hover { outline: 2px solid var(--ink); }
@@ -61,32 +59,27 @@
 <main id="main" class="container">
 
 <h1 class="title">Traces</h1>
-<p class="mono-note tr-meta" id="run-meta" role="status">Loading…</p>
+<p class="mono-note tr-meta" id="run-meta" role="status"></p>
 <div class="tr-controls">
   <label class="eyebrow">Model <select class="field" id="run-select" disabled></select></label>
   <label class="eyebrow">Case <select class="field" id="case-select" disabled></select></label>
 </div>
-<details class="tr-details"><summary>Run data</summary><pre class="reply" id="run-data"></pre></details>
 
 <section class="block" aria-label="Film viewer">
   <div class="viewer-layout">
     <div class="viewer">
       <div class="film" id="film"><div class="empty">Loading…</div></div>
-      <div class="mono-note tr-caption" id="caption"></div>
       <div class="legend">
         <label><input id="show-dentists" type="checkbox" checked><i class="box" style="--dot:var(--box-dentist)"></i>dentists</label>
         <label><input id="show-model" type="checkbox" checked><i class="box" style="--dot:var(--box-model)"></i>model</label>
       </div>
     </div>
     <div>
-      <div class="eyebrow tr-label"><span>Films</span></div>
       <div class="grid" id="grid"></div>
       <div class="legend" style="margin-top:10px">
-        <span>score</span>
         <span><i class="cell" style="background:var(--s0)"></i>0</span>
         <span><i class="cell" style="background:var(--s2)"></i>0.5</span>
         <span><i class="cell" style="background:var(--s4)"></i>1</span>
-        <span><i class="cell" style="box-shadow:inset 0 0 0 1.5px var(--fail-ink)"></i>error</span>
       </div>
     </div>
   </div>
@@ -95,7 +88,7 @@
 <section class="block" id="case-section" hidden aria-labelledby="case-title">
   <h2 class="section-title" id="case-title">Case trace</h2>
   <div class="tr-status" id="case-status" role="status"></div>
-  <p class="note"><a id="trace-download" hidden download>Trace JSON</a></p>
+  <p class="note"><a id="trace-download" hidden download>JSON</a></p>
   <details class="tr-details" id="thinking-section" hidden>
     <summary>Thinking</summary>
     <pre class="reply" id="thinking"></pre>
@@ -121,7 +114,6 @@
     <summary>Calls</summary>
     <div class="scroll" id="calls"></div>
   </details>
-  <h3 class="section-title" style="margin-top:28px">Conversation</h3>
   <div id="conversation"></div>
 </section>
 <noscript><p class="note">Enable JavaScript to view traces. <a href="data/benchmarks.json">Data</a></p></noscript>
@@ -131,11 +123,9 @@
 <footer class="site-footer"><div class="container">
   <div>
     <a class="brand" href="benchmark.html"><b>PanoRead</b><span>.periapical</span></a>
-    <p class="footer-label">Data</p>
-    <ul class="footer-links"><li><a href="https://huggingface.co/datasets/tirandazdylan/periapical-lesions-pai">Dataset</a></li></ul>
   </div>
   <div class="footer-aside">
-    <p>Films: Do et al. 2024, CC BY 4.0.</p>
+    <p><a href="https://huggingface.co/datasets/tirandazdylan/periapical-lesions-pai">Dataset</a> · Films: Do et al. 2024, CC BY 4.0</p>
   </div>
 </div></footer>
 
@@ -281,10 +271,15 @@
     const trace = attempt.traces?.[0];
     const nodes = trace?.nodes || [];
     const messages = nodes.length ? nodes.map((node) => node.message) : activeTrace.prompt || [];
-    $("attempt-status").hidden = false;
-    $("attempt-status").replaceChildren(el("p", {}, `Attempt ${attempt.attempt} · ${attempt.status} · score ${score(attempt.reward)}` +
-      (attempt.selected ? "" : " · not scored")));
-    appendErrors($("attempt-status"), attempt.errors);
+    const attemptErrors = Array.isArray(attempt.errors) ? attempt.errors : [];
+    const showAttempt = activeTrace.attempts.length > 1 || attemptErrors.length > 0;
+    $("attempt-status").hidden = !showAttempt;
+    $("attempt-status").replaceChildren();
+    if (showAttempt) {
+      $("attempt-status").append(el("p", {}, `Attempt ${attempt.attempt} · ${attempt.status} · score ${score(attempt.reward)}` +
+        (attempt.selected ? "" : " · not scored")));
+      appendErrors($("attempt-status"), attemptErrors);
+    }
     const warnings = Array.isArray(attempt.warnings) ? attempt.warnings : [];
     $("warnings-section").hidden = !warnings.length;
     $("warnings-section").open = false;
@@ -415,13 +410,13 @@
       box.append(image, svg);
     } else box.append(el("div", { class: "empty" }, "Image unavailable."));
     showLayers();
-    const dentists = (film.pai || []).join(", ") || "no lesions";
-    const model = film.parsed ? lesions.map((lesion) => lesion.pai).join(", ") || "no lesions" : "unreadable";
-    $("caption").textContent = `Case ${film.film} · score ${score(film.reward)} · dentists PAI ${dentists} · model PAI ${model}`;
     $("case-section").hidden = false;
     $("case-title").textContent = `Case ${film.film}`;
-    $("case-status").replaceChildren(el("p", {}, `${film.status} · ${film.parsed ? "parsed" : "not parsed"} · ${film.model_calls} calls · ${film.images_viewed} images` +
-      (film.stop_condition === "max_turns" ? " · turn limit" : "")));
+    const notes = [`score ${score(film.reward)}`, `${film.model_calls} calls`, `${film.images_viewed} images`];
+    if (film.status !== "success") notes.push(film.status);
+    if (!film.parsed) notes.push("not parsed");
+    if (film.stop_condition === "max_turns") notes.push("turn limit");
+    $("case-status").replaceChildren(el("p", {}, notes.join(" · ")));
     appendErrors($("case-status"), film.errors);
     $("reply").textContent = film.reply == null ? "No reply." : film.reply;
     const download = localPath(film.trace_path);
@@ -438,7 +433,6 @@
     $("case-select").replaceChildren();
     $("case-select").disabled = true;
     $("grid").replaceChildren();
-    $("caption").textContent = "";
     $("case-section").hidden = true;
     $("conversation").replaceChildren();
     $("film").replaceChildren(el("div", { class: "empty" }, message));
@@ -464,10 +458,7 @@
     const entry = entries.find((item) => item.id === $("run-select").value);
     if (!entry) return;
     clearCases("Loading…");
-    $("run-data").textContent = JSON.stringify(entry, null, 2);
-    const harness = { claude_code: "Claude Code", codex: "Codex" }[entry.harness] ?? entry.harness;
-    $("run-meta").textContent = `${entry.name} · ${harness}` +
-      (complete(entry) ? ` · score ${score(entry.mean_reward)}` : ` · ${entry.succeeded}/${entry.expected} films · unranked`);
+    $("run-meta").textContent = complete(entry) ? `score ${score(entry.mean_reward)}` : `${entry.succeeded}/${entry.expected} films`;
     const url = new URL(location.href);
     url.searchParams.set("run", entry.id);
     history.replaceState(null, "", url);
