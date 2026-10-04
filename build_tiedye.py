@@ -22,7 +22,7 @@ from scipy import ndimage
 
 SITE: Final = Path(__file__).resolve().parent
 SEED: Final = 5
-BRIGHTNESS: Final = 0.19  # 1.0 is full-strength dye
+BRIGHTNESS: Final = 0.25  # 1.0 is full-strength dye
 
 
 class Rosette(NamedTuple):
