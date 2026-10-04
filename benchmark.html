@@ -56,10 +56,18 @@
   .chart .grid { stroke: var(--line-soft); stroke-width: 1; }
   .chart .frame { fill: none; stroke: var(--line); stroke-width: 1; }
   .chart .tick { font: 400 11px var(--mono); fill: var(--muted-2); }
-  .chart .band { fill: var(--thinking-machines); fill-opacity: 0.16; stroke: none; }
-  .chart .real { fill: none; stroke: var(--thinking-machines); stroke-width: 2; }
-  .chart .dot { fill: var(--thinking-machines); }
+  .chart .band { fill-opacity: 0.13; stroke: none; }
+  .chart .band.sft { fill: var(--ink-strong); }
+  .chart .band.rl { fill: var(--thinking-machines); }
+  .chart .line { fill: none; stroke-width: 2; }
+  .chart .line.sft { stroke: var(--ink-strong); }
+  .chart .line.rl { stroke: var(--thinking-machines); }
+  .chart .dot.sft { fill: var(--ink-strong); }
+  .chart .dot.rl { fill: var(--thinking-machines); }
   .chart .shuffled { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 5 4; }
+  .legend .swatch { width: 18px; height: 0; border-radius: 0; border-top: 2px solid var(--ink-strong); background: none; }
+  .legend .swatch.rl { border-color: var(--thinking-machines); }
+  .legend .swatch.dashed { border-top-style: dashed; border-color: var(--muted); }
   .ladder { display: grid; grid-template-columns: auto auto auto; justify-content: start; align-items: end; gap: 0 clamp(26px, 6vw, 64px); margin-top: 28px; }
   .rung { position: relative; }
   .rung + .rung::before { content: "→"; position: absolute; left: calc(-1 * clamp(26px, 6vw, 64px) / 2 - 0.4em); bottom: 0.2em; font: 300 clamp(20px, 5vw, 32px)/1 var(--display); color: var(--faint); }
@@ -128,7 +136,12 @@
     <p class="mono-note" id="ladder-note" style="margin-top: 10px;"></p>
     <div class="rl">
       <figure style="margin:0; min-width:0;">
-        <svg class="chart" id="rl-chart" viewBox="0 0 640 360" role="img" aria-label="Validation score by RL step"></svg>
+        <svg class="chart" id="training-chart" viewBox="0 0 640 360" role="img" aria-label="Validation score by training step"></svg>
+        <div class="legend" style="margin-top: 8px;">
+          <span><i class="swatch sft"></i>fine-tuned</span>
+          <span><i class="swatch rl"></i>+ RL</span>
+          <span><i class="swatch dashed"></i>shuffled labels</span>
+        </div>
       </figure>
       <div style="min-width:0;">
         <p class="eyebrow">Test · 387 films</p>
@@ -387,8 +400,8 @@
   loadHero().catch((error) => console.error(`Hero films unavailable: ${error.message}`));
 
   // ---- Post-training: the ladder and the validation curve.
-  async function loadRl() {
-    const response = await fetch("assets/rl.json", { cache: "no-store" });
+  async function loadTraining() {
+    const response = await fetch("assets/training.json", { cache: "no-store" });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     const three = (value) => value.toFixed(3);
@@ -401,12 +414,13 @@
     $("ladder").lastElementChild.title = `RL gain ${gain.mean >= 0 ? "+" : ""}${three(gain.mean)} (95% interval ${three(gain.ci95[0])} to ${three(gain.ci95[1])})`;
     $("ladder-note").textContent = `Inkling-Small · ${data.films} validation films`;
 
+    const points = data.phases.flatMap((phase) => phase.points);
     const [left, right, top, bottom] = [56, 620, 26, 320];
-    const yMax = 0.05 * Math.ceil(Math.max(...data.curve.map((point) => point.ci95[1])) / 0.05);
-    const xMax = Math.max(...data.curve.map((point) => point.step));
+    const yMax = 0.05 * Math.ceil(Math.max(...points.map((point) => point.ci95[1])) / 0.05);
+    const xMax = Math.max(...points.map((point) => point.step));
     const x = (step) => left + (step / xMax) * (right - left);
     const y = (value) => bottom - (value / yMax) * (bottom - top);
-    const chart = $("rl-chart");
+    const chart = $("training-chart");
     const parts = [];
     for (let value = 0; value <= yMax + 1e-9; value += 0.05) {
       parts.push(svg("line", { x1: left, y1: y(value), x2: right, y2: y(value), class: "grid" }));
@@ -415,27 +429,27 @@
       label.textContent = value.toFixed(2);
       parts.push(label);
     }
-    for (let step = 0; step <= xMax; step += 30) {
+    for (let step = 0; step <= xMax; step += 60) {
       parts.push(svg("line", { x1: x(step), y1: top, x2: x(step), y2: bottom, class: "grid" }));
       const label = svg("text", { x: x(step), y: bottom + 18, class: "tick", "text-anchor": "middle" });
       label.textContent = String(step);
       parts.push(label);
     }
     const axis = svg("text", { x: (left + right) / 2, y: bottom + 34, class: "tick", "text-anchor": "middle" });
-    axis.textContent = "RL step";
+    axis.textContent = "training step";
     parts.push(axis, svg("rect", { x: left, y: top, width: right - left, height: bottom - top, class: "frame" }));
-    const upper = data.curve.map((point) => `${x(point.step)},${y(point.ci95[1])}`);
-    const lower = data.curve.map((point) => `${x(point.step)},${y(point.ci95[0])}`).reverse();
-    parts.push(svg("polygon", { points: [...upper, ...lower].join(" "), class: "band" }));
-    parts.push(svg("polyline", { points: data.curve.map((point) => `${x(point.step)},${y(point.shuffled)}`).join(" "), class: "shuffled" }));
-    const shuffledLabel = svg("text", { x: right - 6, y: y(data.curve[data.curve.length - 1].shuffled) - 8, class: "tick", "text-anchor": "end" });
-    shuffledLabel.textContent = "shuffled labels";
-    parts.push(shuffledLabel);
-    parts.push(svg("polyline", { points: data.curve.map((point) => `${x(point.step)},${y(point.score)}`).join(" "), class: "real" }));
-    for (const point of data.curve) parts.push(svg("circle", { cx: x(point.step), cy: y(point.score), r: 3, class: "dot" }));
+    parts.push(svg("polyline", { points: points.map((point) => `${x(point.step)},${y(point.shuffled)}`).join(" "), class: "shuffled" }));
+    for (const phase of data.phases) {
+      const kind = phase.name === "+ RL" ? "rl" : "sft";
+      const upper = phase.points.map((point) => `${x(point.step)},${y(point.ci95[1])}`);
+      const lower = phase.points.map((point) => `${x(point.step)},${y(point.ci95[0])}`).reverse();
+      parts.push(svg("polygon", { points: [...upper, ...lower].join(" "), class: `band ${kind}` }));
+      parts.push(svg("polyline", { points: phase.points.map((point) => `${x(point.step)},${y(point.score)}`).join(" "), class: `line ${kind}` }));
+      for (const point of phase.points) parts.push(svg("circle", { cx: x(point.step), cy: y(point.score), r: 3, class: `dot ${kind}` }));
+    }
     chart.replaceChildren(...parts);
   }
-  loadRl().catch((error) => console.error(`Post-training data unavailable: ${error.message}`));
+  loadTraining().catch((error) => console.error(`Post-training data unavailable: ${error.message}`));
 
   // Underline the tab of the section in view.
   const tabs = [...document.querySelectorAll(".tab")];
