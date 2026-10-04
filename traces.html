@@ -6,47 +6,151 @@
 <meta name="theme-color" content="#121212">
 <title>Traces · PanoRead</title>
 <meta name="description" content="Agent traces: every message, tool call and image.">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@300;400;500;700&family=Spectral:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@300;400;500;700&family=Spectral:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap">
 <link rel="stylesheet" href="site.css">
 <style>
-  :root { --s0: var(--line-soft); --s1: var(--line-strong); --s2: var(--faint); --s3: var(--muted); --s4: var(--ink); }
-  .tr-meta { margin: 8px 0 0; overflow-wrap: anywhere; }
-  main > section.block { margin-top: 40px; padding-top: 28px; }
-  main > section.block:first-of-type { margin-top: 24px; padding-top: 0; border-top: 0; }
-  .caption { font: 400 11px/17px var(--mono); color: var(--muted); overflow-wrap: anywhere; }
-  .tr-controls { display: flex; flex-wrap: wrap; gap: 10px 24px; margin-top: 16px; }
-  .tr-controls label { display: flex; align-items: center; gap: 8px; max-width: 100%; min-width: 0; }
-  .viewer-layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 28px; align-items: start; }
-  .viewer-layout > *, .viewer { min-width: 0; }
-  .viewer { display: grid; gap: 8px; }
-  .film { position: relative; background: var(--film); border-radius: 4px; overflow: hidden; }
+  /* The viewer follows Prime Intellect's evaluation sample view: films on the left, the conversation in the
+     middle, an overview on the right. Its type is IBM Plex; scores are green, amber or pink-red. */
+  :root {
+    --ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --ui-mono: "IBM Plex Mono", var(--mono);
+    --px-good: #1dd471; --px-mid: #f5b942; --px-bad: #fe2869;
+    --px-text: rgba(255, 255, 255, 0.92); --px-soft: rgba(255, 255, 255, 0.62); --px-muted: #8d8d93;
+    --px-line: rgba(255, 255, 255, 0.1); --px-hover: rgba(255, 255, 255, 0.07); --px-selected: rgba(255, 255, 255, 0.12);
+  }
+  .container { width: min(1440px, calc(100% - 48px)); }
+  .pass { color: var(--px-good); } .mid { color: var(--px-mid); } .fail { color: var(--px-bad); } .idle { color: var(--px-muted); }
+
+  .pv-top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 10px 24px; margin-top: 24px; }
+  .pv-top .title { margin: 0; font-size: 40px; }
+  .pv-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding-bottom: 4px; }
+  .pv-controls label { display: flex; align-items: center; gap: 8px; }
+  .pv-controls .mono-note { margin: 0; }
+
+  .pv { display: grid; grid-template-columns: 224px minmax(0, 1fr) clamp(300px, 27vw, 380px); grid-template-areas: "films chat overview"; grid-template-rows: minmax(0, 1fr); height: clamp(560px, calc(100vh - 168px), 980px); margin-top: 16px; overflow: hidden; border: 1px solid var(--glass-line); border-radius: 16px; background: var(--glass); backdrop-filter: blur(18px) saturate(1.25); font: 400 14px/22px var(--ui); color: var(--px-text); }
+  .pv-films { grid-area: films; } .pv-chat { grid-area: chat; } .pv-overview { grid-area: overview; }
+  .pv-films, .pv-chat, .pv-overview { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .pv-chat, .pv-overview { border-left: 1px solid var(--px-line); }
+  .pv-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: none; height: 56px; padding: 0 20px; border-bottom: 1px solid var(--px-line); }
+  .pv-head h2 { margin: 0; font: 500 14px/20px var(--ui); color: #fff; }
+  .pv-empty { margin: 0; padding: 24px 20px; color: var(--px-muted); font: 400 13px/20px var(--ui-mono); }
+
+  .pv-icon-button { display: inline-grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--px-soft); cursor: pointer; }
+  .pv-icon-button:hover:not(:disabled) { background: var(--px-hover); color: #fff; }
+  .pv-icon-button:disabled { opacity: 0.35; cursor: default; }
+  .pv-icon-button[data-state="copied"] { color: var(--px-good); }
+  .pv-icon-button[data-state="failed"] { color: var(--px-bad); }
+  .icon { display: block; }
+
+  .pv-count { display: flex; align-items: center; justify-content: space-between; flex: none; height: 44px; padding: 0 12px 0 20px; font: 500 13px/20px var(--ui-mono); }
+  .pv-step { display: flex; gap: 2px; }
+  .pv-list { position: relative; flex: 1; min-height: 0; overflow-y: auto; padding: 0 8px 12px; overscroll-behavior: contain; }
+  .pv-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; height: 40px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; color: #fff; font: 500 14px/20px var(--ui); text-align: left; cursor: pointer; }
+  .pv-item:hover { background: var(--px-hover); }
+  .pv-item[aria-current="true"] { background: var(--px-selected); }
+  .pv-item b { font: 500 12px/20px var(--ui-mono); }
+
+  .pv-menu { position: relative; }
+  .pv-menu-button { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border: 0; border-radius: 6px; background: transparent; color: var(--px-soft); font: 400 13px/20px var(--ui); cursor: pointer; }
+  .pv-menu-button:hover { background: var(--px-hover); color: #fff; }
+  .pv-popover { position: absolute; right: 0; top: calc(100% + 6px); z-index: 5; min-width: 168px; padding: 6px; border: 1px solid var(--px-line); border-radius: 10px; background: rgba(18, 18, 22, 0.97); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5); }
+  .pv-popover label { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 6px; font: 400 13px/20px var(--ui); color: var(--px-text); cursor: pointer; }
+  .pv-popover label:hover { background: var(--px-hover); }
+  .pv-popover input { accent-color: var(--thinking-machines); }
+
+  .pv-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: none; min-height: 52px; padding: 8px 20px; }
+  .pv-search { display: flex; align-items: center; gap: 8px; flex: 1 1 auto; max-width: 340px; padding: 0 8px; border: 1px solid transparent; border-radius: 8px; color: var(--px-muted); }
+  .pv-search:focus-within { border-color: var(--px-line); background: var(--px-hover); }
+  .pv-search input { flex: 1; min-width: 0; padding: 5px 0; border: 0; background: transparent; color: #fff; font: 400 13px/20px var(--ui); }
+  .pv-search input:focus-visible { outline: 0; }
+  .pv-search input::placeholder { color: var(--px-muted); }
+  .pv-search kbd { padding: 0 6px; border: 1px solid var(--px-line); border-radius: 4px; font: 500 11px/18px var(--ui-mono); color: var(--px-muted); }
+  .pv-actions { display: flex; align-items: center; gap: 4px; }
+  .pv-text-button { padding: 3px 8px; border: 0; border-radius: 6px; background: transparent; color: var(--px-soft); font: 500 12px/18px var(--ui); cursor: pointer; }
+  .pv-text-button:hover { background: var(--px-hover); color: #fff; }
+  .pv-sep { width: 1px; height: 14px; background: var(--px-line); }
+
+  .pv-messages { flex: 1; min-height: 0; margin: 0 20px 20px; overflow-y: auto; border: 1px solid var(--px-line); border-radius: 12px; background: rgba(0, 0, 0, 0.4); overscroll-behavior: contain; }
+  .msg { border-bottom: 1px solid var(--px-line); }
+  .msg > summary { display: grid; grid-template-columns: 84px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 56px; padding: 0 14px 0 20px; list-style: none; cursor: pointer; }
+  .msg > summary::-webkit-details-marker { display: none; }
+  .msg > summary:hover { background: rgba(255, 255, 255, 0.025); }
+  .msg-role { font: 500 14px/18px var(--ui); color: #fff; }
+  .msg-role small { display: block; font: 400 11px/14px var(--ui-mono); color: var(--px-muted); overflow-wrap: anywhere; }
+  .msg-preview { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--px-soft); }
+  .msg[open] > summary .msg-preview { visibility: hidden; }
+  .msg-actions { display: flex; align-items: center; gap: 2px; }
+  .msg-chevron { display: inline-grid; place-items: center; width: 28px; height: 28px; color: var(--px-soft); transition: transform 0.15s ease; }
+  .msg[open] .msg-chevron { transform: rotate(180deg); }
+  .msg-body { padding: 0 24px 20px 116px; }
+  .msg-body > * + * { margin-top: 12px; }
+  .msg-text { margin: 0; color: var(--px-text); white-space: pre-wrap; overflow-wrap: anywhere; font: 400 14px/22px var(--ui); }
+  .msg-code { margin: 0; padding: 10px 12px; max-height: 380px; overflow: auto; border: 1px solid var(--px-line); border-radius: 8px; background: rgba(255, 255, 255, 0.04); color: var(--px-text); white-space: pre-wrap; overflow-wrap: anywhere; font: 400 12px/18px var(--ui-mono); }
+  .msg-tool-name { margin-bottom: 4px; font: 500 12px/18px var(--ui-mono); color: var(--px-muted); }
+  .msg-field + .msg-field { margin-top: 8px; }
+  .msg-field-name { margin-bottom: 2px; font: 400 11px/16px var(--ui-mono); color: var(--px-muted); }
+  .msg-thinking > summary { width: fit-content; cursor: pointer; font: 400 12px/18px var(--ui-mono); color: var(--px-muted); }
+  .msg-thinking[open] > summary { margin-bottom: 8px; }
+  .msg-thinking .msg-text { color: var(--px-soft); }
+  .msg-images { display: flex; flex-wrap: wrap; gap: 12px; }
+  .msg-images figure { margin: 0; min-width: 0; }
+  .msg-images img { display: block; max-width: min(100%, 420px); max-height: 300px; border: 1px solid var(--px-line); border-radius: 8px; background: #000; }
+  .msg-images figcaption { margin-top: 4px; font: 400 11px/16px var(--ui-mono); color: var(--px-muted); }
+  .msg-meta { font: 400 11px/16px var(--ui-mono); color: var(--px-muted); }
+  .msg-error { color: var(--px-bad); }
+  .msg-divider { padding: 10px 20px; border-bottom: 1px solid var(--px-line); background: rgba(255, 255, 255, 0.03); text-align: center; font: 500 11px/16px var(--ui-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--px-muted); }
+  .pv-messages[data-thinking="off"] .msg-thinking, .pv-messages[data-images="off"] .msg-images { display: none; }
+
+  .pv-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 0 20px 24px; overscroll-behavior: contain; }
+  .pv-rows { display: grid; margin: 0; }
+  .pv-row { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; min-height: 28px; font: 400 12px/20px var(--ui-mono); }
+  .pv-row dt { flex: none; color: #fff; }
+  .pv-row dd { margin: 0; min-width: 0; text-align: right; color: #fff; overflow-wrap: anywhere; }
+  .pv-row dd a { border-bottom-color: var(--px-line); }
+  .pv-row select.field { max-width: 190px; }
+  .pv-top-row { padding-top: 14px; }
+  .pv-big { font: 600 15px/20px var(--ui-mono); }
+  .pv-sec { padding: 14px 0 2px; margin-top: 12px; border-top: 1px solid var(--px-line); }
+  .pv-sec h3 { margin: 0 0 6px; font: 400 13px/20px var(--ui); color: var(--px-muted); }
+  .pv-sec-head { display: flex; align-items: center; justify-content: space-between; }
+  .pv-sec-head h3 { margin-bottom: 0; }
+  .pv-pre { margin: 6px 0 10px; max-height: 200px; overflow: auto; font: 400 12px/18px var(--ui-mono); color: #fff; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .pv-notes { margin: 0 0 10px; padding-left: 16px; font: 400 12px/18px var(--ui-mono); overflow-wrap: anywhere; }
+  .pv-filmbox { margin-top: 12px; }
+  .film { position: relative; overflow: hidden; border-radius: 8px; background: var(--film); }
   .film img { display: block; width: 100%; height: auto; }
   .film svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .film .empty { color: var(--faint); padding: 48px 24px; font: 400 12px/18px var(--mono); }
-  .legend label { display: inline-flex; align-items: center; gap: 6px; }
-  .legend .cell { width: 12px; height: 12px; border-radius: 2px; border: 1px solid var(--line); background: transparent; }
-  .grid { display: flex; flex-wrap: wrap; gap: 3px; }
-  .cellbtn { width: 24px; height: 24px; border: 1px solid var(--line); border-radius: 3px; padding: 0; cursor: pointer; }
-  .cellbtn:hover { outline: 2px solid var(--ink); }
-  .cellbtn.sel { outline: 2px solid var(--anthropic); }
-  .cellbtn:focus-visible { outline: 2px solid var(--ink); }
-  .cellbtn.noreply { box-shadow: inset 0 0 0 1.5px var(--fail-ink); }
-  .reply { margin: 0; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; font: 400 12px/18px var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 30rem; overflow: auto; }
-  .tr-details { margin: 0; min-width: 0; border-bottom: 1px solid var(--line-soft); padding: 8px 0; }
-  .tr-details > summary, #conversation summary { cursor: pointer; font: 400 12px/18px var(--mono); color: var(--ink-soft); overflow-wrap: anywhere; }
-  .tr-details[open] > summary, #conversation details[open] > summary { margin-bottom: 8px; color: var(--ink); }
-  #conversation { margin-top: 12px; border-top: 1px solid var(--line-soft); }
-  #conversation details { margin: 0; min-width: 0; padding: 8px 0; border-bottom: 1px solid var(--line-soft); }
-  .tr-status { margin-top: 12px; font: 400 12px/18px var(--mono); color: var(--ink-soft); overflow-wrap: anywhere; }
-  .tr-status p { margin: 0; }
-  .errors { margin: 6px 0 0; padding: 8px 12px; border: 1px solid var(--fail-edge); border-radius: 6px; background: var(--fail-wash); color: var(--fail-ink); font: 400 12px/18px var(--mono); overflow-wrap: anywhere; }
-  .trace-images { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 16px; }
-  .trace-images figure { margin: 12px 0; min-width: 0; }
-  .trace-images img { display: block; max-width: 100%; height: auto; background: var(--film); border-radius: 4px; }
-  .trace-images figcaption { margin-top: 4px; font: 400 10px/16px var(--mono); color: var(--muted-2); overflow-wrap: anywhere; }
-  #calls table td:last-child { min-width: 8rem; overflow-wrap: anywhere; }
-  #warnings { padding-left: 1.2rem; }
-  @media (max-width: 900px) { .viewer-layout { grid-template-columns: 1fr; } }
+  .film .empty { padding: 28px 16px; color: var(--px-muted); font: 400 12px/18px var(--ui-mono); }
+  .pv-legend { margin-top: 8px; font: 400 11px/16px var(--ui-mono); }
+  .pv-legend label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+  .pv-legend input { accent-color: var(--thinking-machines); }
+
+  @media (max-width: 1180px) {
+    .pv { grid-template-columns: 208px minmax(0, 1fr); grid-template-areas: "films chat" "overview overview"; grid-template-rows: auto; height: auto; }
+    .pv-films, .pv-chat { height: min(720px, 82vh); }
+    .pv-overview { border-left: 0; border-top: 1px solid var(--px-line); }
+    .pv-scroll { overflow: visible; columns: 2 320px; column-gap: 40px; }
+    .pv-top-row, .pv-filmbox, .pv-sec { break-inside: avoid; }
+  }
+  /* On a phone the parts of the overview are interleaved with the other panels: films, then the score and the
+     film, then the conversation, then the rest of the overview. */
+  @media (max-width: 760px) {
+    .pv { grid-template-columns: minmax(0, 1fr); grid-template-areas: none; }
+    .pv-films, .pv-chat { grid-area: auto; }
+    .pv-films { order: 1; height: 300px; }
+    .pv-overview, .pv-scroll { display: contents; }
+    .pv-overview > .pv-head { order: 2; border-top: 1px solid var(--px-line); }
+    .pv-scroll > .pv-top-row, .pv-scroll > .pv-filmbox { order: 3; margin-inline: 14px; }
+    .pv-chat { order: 4; height: auto; border-left: 0; border-top: 1px solid var(--px-line); }
+    .pv-messages { overflow: visible; }
+    .pv-scroll > .pv-sec { order: 5; margin-inline: 14px; }
+    .pv-toolbar { flex-wrap: wrap; padding: 8px 14px; }
+    .pv-messages { margin: 0 10px 12px; }
+    .msg > summary { grid-template-columns: 62px minmax(0, 1fr) auto; padding: 0 8px 0 14px; }
+    .msg-body { padding: 0 14px 16px; }
+    .pv-head { padding: 0 14px; }
+  }
+  @media (max-width: 640px) { .container { width: calc(100% - 32px); } .pv-top .title { font-size: 34px; } }
 </style>
 </head>
 <body>
@@ -57,67 +161,81 @@
 </div></header>
 
 <main id="main" class="container">
-
-<h1 class="title">Traces</h1>
-<p class="mono-note tr-meta" id="run-meta" role="status"></p>
-<div class="tr-controls">
-  <label class="eyebrow">Model <select class="field" id="run-select" disabled></select></label>
-  <label class="eyebrow">Case <select class="field" id="case-select" disabled></select></label>
-</div>
-
-<section class="block" aria-label="Film viewer">
-  <div class="viewer-layout">
-    <div class="viewer">
-      <div class="film" id="film"><div class="empty">Loading…</div></div>
-      <div class="legend">
-        <label><input id="show-dentists" type="checkbox" checked><i class="box" style="--dot:var(--box-dentist)"></i>dentists</label>
-        <label><input id="show-model" type="checkbox" checked><i class="box" style="--dot:var(--box-model)"></i>model</label>
-      </div>
-    </div>
-    <div>
-      <div class="grid" id="grid"></div>
-      <div class="legend" style="margin-top:10px">
-        <span><i class="cell" style="background:var(--s0)"></i>0</span>
-        <span><i class="cell" style="background:var(--s2)"></i>0.5</span>
-        <span><i class="cell" style="background:var(--s4)"></i>1</span>
-      </div>
+  <div class="pv-top">
+    <h1 class="title">Traces</h1>
+    <div class="pv-controls">
+      <label class="eyebrow">Model <select class="field" id="run-select" disabled></select></label>
+      <span class="mono-note" id="run-meta" role="status"></span>
     </div>
   </div>
-</section>
 
-<section class="block" id="case-section" hidden aria-labelledby="case-title">
-  <h2 class="section-title" id="case-title">Case trace</h2>
-  <div class="tr-status" id="case-status" role="status"></div>
-  <p class="note"><a id="trace-download" hidden download>JSON</a></p>
-  <details class="tr-details" id="thinking-section" hidden>
-    <summary>Thinking</summary>
-    <pre class="reply" id="thinking"></pre>
-  </details>
-  <details class="tr-details">
-    <summary>Final reply</summary>
-    <pre class="reply" id="reply"></pre>
-  </details>
-  <p class="note" id="trace-status" role="status"></p>
-  <div class="tr-controls" id="attempt-control" hidden>
-    <label class="eyebrow">Attempt <select class="field" id="attempt-select"></select></label>
+  <div class="pv" aria-label="Trace viewer">
+    <aside class="pv-films" aria-label="Films">
+      <div class="pv-head"><h2>Films</h2></div>
+      <div class="pv-count">
+        <span id="film-position">0/0</span>
+        <span class="pv-step">
+          <button type="button" class="pv-icon-button" id="film-prev" aria-label="Previous film" disabled></button>
+          <button type="button" class="pv-icon-button" id="film-next" aria-label="Next film" disabled></button>
+        </span>
+      </div>
+      <div class="pv-list" id="film-list" role="group" aria-label="Films"></div>
+    </aside>
+
+    <section class="pv-chat" aria-label="Conversation">
+      <div class="pv-head">
+        <h2>Conversation</h2>
+        <div class="pv-menu">
+          <button type="button" class="pv-menu-button" id="options-button" aria-haspopup="true" aria-expanded="false">Display options</button>
+          <div class="pv-popover" id="options-menu" hidden>
+            <label><input type="checkbox" id="option-raw">Raw JSON</label>
+            <label><input type="checkbox" id="option-thinking" checked>Thinking</label>
+            <label><input type="checkbox" id="option-images" checked>Images</label>
+          </div>
+        </div>
+      </div>
+      <div class="pv-toolbar">
+        <label class="pv-search" id="search-box"><input id="search" type="search" placeholder="Search…" aria-label="Search messages" autocomplete="off"><kbd id="search-key">Ctrl K</kbd></label>
+        <div class="pv-actions">
+          <button type="button" class="pv-text-button" id="collapse-all">Collapse All</button>
+          <span class="pv-sep" aria-hidden="true"></span>
+          <button type="button" class="pv-text-button" id="expand-all">Expand All</button>
+          <button type="button" class="pv-icon-button" id="copy-all" aria-label="Copy conversation as JSON"></button>
+        </div>
+      </div>
+      <div class="pv-messages" id="conversation" data-thinking="on" data-images="on" role="status"></div>
+    </section>
+
+    <aside class="pv-overview" aria-label="Overview">
+      <div class="pv-head"><h2>Overview</h2></div>
+      <div class="pv-scroll">
+        <dl class="pv-rows pv-top-row"><div class="pv-row"><dt>score</dt><dd><span class="pv-big idle" id="ov-score">—</span></dd></div></dl>
+        <div class="pv-filmbox">
+          <div class="film" id="film"><div class="empty">Loading…</div></div>
+          <div class="pv-legend legend">
+            <label><input id="show-dentists" type="checkbox" checked><i class="box" style="--dot:var(--box-dentist)"></i>dentists</label>
+            <label><input id="show-model" type="checkbox" checked><i class="box dashed" style="--dot:var(--box-model)"></i>model</label>
+          </div>
+        </div>
+        <section class="pv-sec"><h3>identity</h3>
+          <dl class="pv-rows">
+            <div class="pv-row"><dt>film</dt><dd id="id-film">—</dd></div>
+            <div class="pv-row"><dt>status</dt><dd id="id-status">—</dd></div>
+            <div class="pv-row" id="attempt-control" hidden><dt>attempt</dt><dd><select class="field" id="attempt-select"></select></dd></div>
+            <div class="pv-row"><dt>trace</dt><dd><a id="trace-download" hidden download>JSON</a></dd></div>
+          </dl>
+        </section>
+        <section class="pv-sec" hidden><h3>metrics</h3><dl class="pv-rows" id="ov-metrics"></dl></section>
+        <section class="pv-sec" hidden><h3>activity</h3><dl class="pv-rows" id="ov-activity"></dl></section>
+        <section class="pv-sec"><div class="pv-sec-head"><h3>answer</h3><button type="button" class="pv-icon-button" id="answer-copy" aria-label="Copy answer"></button></div><pre class="pv-pre" id="ov-answer"></pre></section>
+        <section class="pv-sec" hidden><h3>timing</h3><dl class="pv-rows" id="ov-timing"></dl></section>
+        <section class="pv-sec" hidden><h3>tokens</h3><dl class="pv-rows" id="ov-tokens"></dl></section>
+        <section class="pv-sec" id="ov-errors" hidden><h3>errors</h3><ul class="pv-notes fail"></ul></section>
+        <section class="pv-sec" id="ov-warnings" hidden><h3>warnings</h3><ul class="pv-notes mid"></ul></section>
+      </div>
+    </aside>
   </div>
-  <div class="tr-status" id="attempt-status" hidden></div>
-  <details class="tr-details" id="warnings-section" hidden>
-    <summary id="warnings-title"></summary>
-    <ul class="note" id="warnings"></ul>
-  </details>
-  <details class="tr-details" id="tools-section" hidden>
-    <summary>Tools</summary>
-    <pre class="reply" id="tools"></pre>
-  </details>
-  <details class="tr-details" id="calls-section" hidden>
-    <summary>Calls</summary>
-    <div class="scroll" id="calls"></div>
-  </details>
-  <div id="conversation"></div>
-</section>
-<noscript><p class="note">Enable JavaScript to view traces. <a href="data/benchmarks.json">Data</a></p></noscript>
-
+  <noscript><p class="note">Enable JavaScript to view traces. <a href="data/benchmarks.json">Data</a></p></noscript>
 </main>
 
 <footer class="site-footer"><div class="container">
@@ -143,10 +261,26 @@
     for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
     return node;
   };
+  const ICONS = {
+    copy: [["rect", { x: 9, y: 9, width: 11, height: 11, rx: 2 }], ["path", { d: "M5 15V6a2 2 0 0 1 2-2h9" }]],
+    down: [["path", { d: "M6 9l6 6 6-6" }]],
+    up: [["path", { d: "M6 15l6-6 6 6" }]],
+    search: [["circle", { cx: 11, cy: 11, r: 6 }], ["path", { d: "M20 20l-4.2-4.2" }]],
+  };
+  const icon = (name) => {
+    const svg = svgEl("svg", { class: "icon", viewBox: "0 0 24 24", width: 16, height: 16, fill: "none", stroke: "currentColor",
+      "stroke-width": 1.8, "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true" });
+    for (const [tag, attrs] of ICONS[name]) svg.append(svgEl(tag, attrs));
+    return svg;
+  };
   const score = (value) => Number.isFinite(value) ? value.toFixed(3) : "unscored";
+  const tone = (value) => !Number.isFinite(value) ? "idle" : value >= 1 - 1e-9 ? "pass" : value > 0 ? "mid" : "fail";
   const complete = (entry) => entry.status === "complete" && entry.expected > 0 &&
     entry.succeeded === entry.expected && entry.errors === 0 &&
     Number.isFinite(entry.mean_reward);
+  const listOf = (value) => Array.isArray(value) ? value : [];
+  const seconds = (value) => value < 60 ? `${value.toFixed(1)}s` : `${Math.floor(value / 60)}m ${Math.round(value % 60)}s`;
+  const count = (value) => value.toLocaleString("en-US");
   const base = new URL("./", location.href);
   function localPath(value, image = false) {
     if (typeof value !== "string" || !/^data\//.test(value)) return null;
@@ -164,8 +298,11 @@
     try { return await response.json(); }
     catch { throw new Error(`${path}: HTTP ${response.status}, invalid JSON`); }
   }
-  let entries = [], films = [], loadId = 0, caseId = 0, activeTrace = null;
-  let dentistLayer, modelLayer;
+
+  // ---- State. `conversation` is what the middle panel shows; `rows` are its DOM rows, for search.
+  let entries = [], films = [], filmIndex = -1, loadId = 0, caseId = 0;
+  let activeTrace = null, conversation = [], rows = [], noMatches = null;
+  let dentistLayer = null, modelLayer = null;
   const traceCache = new Map();
   async function fetchTrace(path) {
     let trace = traceCache.get(path);
@@ -176,15 +313,29 @@
     return trace;
   }
 
-  function imageFigure(path, label) {
-    const figure = el("figure");
-    const link = el("a", { href: path, target: "_blank", rel: "noopener" });
-    const image = el("img", { src: path, alt: label, loading: "lazy" });
-    image.addEventListener("error", () => image.replaceWith(el("p", { class: "errors" }, `Image unavailable: ${label}`)), { once: true });
-    link.append(image);
-    figure.append(link, el("figcaption", { class: "caption" }, label));
-    return figure;
+  // ---- Reading messages.
+  const textOf = (content) => {
+    if (typeof content === "string") return content;
+    if (!Array.isArray(content)) return "";
+    return content.map((part) => typeof part === "string" ? part : typeof part?.text === "string" ? part.text : "")
+      .filter(Boolean).join("\n\n");
+  };
+  const toolCallsOf = (message) => Array.isArray(message.tool_calls) ? message.tool_calls : [];
+  const callName = (call) => call.name ?? call.function?.name ?? "tool";
+  const callArguments = (call) => call.arguments ?? call.function?.arguments;
+  // A tool call's arguments as [name, text] fields. A lone string argument (a shell command, a file path)
+  // has no name; strings keep their real line breaks; anything else is shown as JSON.
+  function argumentFields(raw) {
+    const json = (value) => JSON.stringify(value ?? null, null, 2);
+    if (typeof raw !== "string") return [[null, json(raw)]];
+    let parsed;
+    try { parsed = JSON.parse(raw); } catch { return [[null, raw]]; }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return [[null, json(parsed)]];
+    const fields = Object.entries(parsed);
+    if (fields.length === 1 && typeof fields[0][1] === "string") return [[null, fields[0][1]]];
+    return fields.map(([name, value]) => [name, typeof value === "string" ? value : json(value)]);
   }
+  const formatArguments = (raw) => argumentFields(raw).map(([name, value]) => name === null ? value : `${name}: ${value}`).join("\n");
   function messageImages(value, found = new Map()) {
     if (Array.isArray(value)) {
       for (const item of value) messageImages(item, found);
@@ -195,178 +346,286 @@
     }
     return found;
   }
-  function messagePreview(message) {
-    if (typeof message.content === "string") return message.content.replace(/\s+/g, " ").slice(0, 120);
-    if (Array.isArray(message.content)) {
-      const text = message.content.map((part) => typeof part === "string" ? part : part.text || "").join(" ");
-      if (text) return text.replace(/\s+/g, " ").slice(0, 120);
-    }
+  function messageText(message) {
+    const parts = [textOf(message.content)];
+    for (const call of toolCallsOf(message)) parts.push(`${callName(call)}\n${formatArguments(callArguments(call))}`);
+    return parts.filter(Boolean).join("\n\n");
+  }
+  function previewOf(message) {
+    const line = (value) => value.replace(/\s+/g, " ").trim().slice(0, 200);
+    const text = line(textOf(message.content));
+    if (text) return text;
+    const calls = toolCallsOf(message);
+    if (calls.length) return line(calls.map((call) => `${callName(call)} ${formatArguments(callArguments(call))}`).join(" · "));
     const imageCount = messageImages(message).size;
     if (imageCount) return `${imageCount} image${imageCount === 1 ? "" : "s"}`;
-    if (message.tool_calls?.length) return message.tool_calls.map((call) => call.function?.name || call.name || "tool call").join(", ").slice(0, 120);
-    if (message.reasoning_content) return "Thinking";
-    return "message";
+    return typeof message.reasoning_content === "string" && message.reasoning_content ? "thinking" : "";
   }
-  function renderConversation(messages) {
-    const container = $("conversation");
-    container.replaceChildren();
-    if (!messages.length) {
-      container.append(el("p", { class: "errors" }, "No messages."));
-      return;
+  const OPEN_LIMIT = 1500;
+  const startsOpen = (message, role) => role !== "system" &&
+    textOf(message.content).length + toolCallsOf(message).reduce((sum, call) => sum + String(callArguments(call) ?? "").length, 0) <= OPEN_LIMIT;
+
+  // ---- The conversation. The nodes are a tree of every request the harness sent. Each root starts one
+  // context (a second root is a fresh context after compaction); within a context only the latest branch
+  // is shown, because earlier branches are retried or re-sent copies of the same step. The JSON keeps them.
+  function contextChains(nodes) {
+    const byIndex = new Map(nodes.map((node) => [node.index, node]));
+    const children = new Map();
+    for (const node of nodes) {
+      const parent = node.parent ?? null;
+      children.set(parent, [...(children.get(parent) ?? []), node.index]);
     }
-    messages.forEach((message, index) => {
-      const detail = el("details");
-      detail.append(el("summary", {}, `${index + 1}. ${message.role || "message"} · ${messagePreview(message)}`),
-        el("pre", { class: "reply" }, JSON.stringify(message, null, 2)));
-      const images = messageImages(message);
-      if (images.size) {
-        const gallery = el("div", { class: "trace-images" });
-        let imageIndex = 0;
-        for (const [path, image] of images) {
-          const display = image.display_size;
-          const original = image.original_size;
-          const size = Array.isArray(display) && Array.isArray(original)
-            ? ` · ${Math.max(...display)} px of ${original.join("x")}` : "";
-          gallery.append(imageFigure(path, `Message ${index + 1}, image ${++imageIndex}${size}`));
-        }
-        detail.append(gallery);
+    return (children.get(null) ?? []).map((root) => {
+      let latest = root;
+      const pending = [root];
+      while (pending.length) {
+        const index = pending.pop();
+        latest = Math.max(latest, index);
+        pending.push(...(children.get(index) ?? []));
       }
-      container.append(detail);
+      const chain = [];
+      for (let cursor = latest; cursor !== null; cursor = byIndex.get(cursor).parent ?? null) {
+        const node = byIndex.get(cursor);
+        if (!node) throw new Error("trace tree is broken");
+        chain.push(node);
+      }
+      return chain.reverse();
     });
   }
-  function appendErrors(container, errors) {
-    if (!Array.isArray(errors) || !errors.length) return;
-    const list = el("ul");
-    for (const error of errors) list.append(el("li", {}, typeof error === "string" ? error : JSON.stringify(error)));
-    container.append(list);
+  // The call that produced an assistant message. The harness re-sends history with small edits, so the
+  // message in the chain can be a copy of the sampled one; they share a parent.
+  function callFor(node, byIndex, callsByNode) {
+    const exact = callsByNode.get(node.index);
+    if (exact) return exact;
+    let twin = null;
+    for (const [index, call] of callsByNode) {
+      const other = byIndex.get(index);
+      if (other && other.parent === node.parent && index < node.index) twin = call;
+    }
+    return twin;
   }
-  function renderCalls(calls) {
-    $("calls").replaceChildren();
-    if (!calls.length) {
-      $("calls").append(el("p", { class: "caption" }, "No calls."));
-      return;
-    }
-    const table = el("table", { class: "data" }), head = el("thead"), heading = el("tr"), body = el("tbody");
-    for (const label of ["#", "Finish", "Prompt", "Output", "Cached", "Sec", "Error"]) {
-      heading.append(el("th", { scope: "col" }, label));
-    }
-    head.append(heading);
-    calls.forEach((call, index) => {
-      const usage = call.usage || {}, time = call.time || {};
-      const seconds = Number.isFinite(time.start) && Number.isFinite(time.end) ? (time.end - time.start).toFixed(2) : "—";
-      const row = el("tr");
-      for (const value of [index, call.finish_reason, usage.prompt_tokens, usage.completion_tokens,
-        usage.cached_input_tokens, seconds, call.error == null ? "—" : JSON.stringify(call.error)]) {
-        row.append(el("td", {}, value == null ? "—" : String(value)));
+  function conversationOf(trace) {
+    const byIndex = new Map(trace.nodes.map((node) => [node.index, node]));
+    const callsByNode = new Map((trace.calls ?? []).filter((call) => Number.isInteger(call.node)).map((call) => [call.node, call]));
+    const result = [];
+    contextChains(trace.nodes).forEach((chain, chainIndex) => {
+      if (chainIndex > 0) result.push({ kind: "divider" });
+      for (const node of chain) {
+        result.push({ kind: "message", message: node.message, call: node.message.role === "assistant" ? callFor(node, byIndex, callsByNode) : null });
       }
-      body.append(row);
     });
-    table.append(head, body);
-    $("calls").append(table);
+    return result;
   }
-  function renderAttempt(index) {
-    const attempt = activeTrace.attempts[index];
-    if (!attempt) return;
-    $("attempt-select").value = String(index);
-    const trace = attempt.traces?.[0];
-    const nodes = trace?.nodes || [];
-    const messages = nodes.length ? nodes.map((node) => node.message) : activeTrace.prompt || [];
-    const attemptErrors = Array.isArray(attempt.errors) ? attempt.errors : [];
-    const showAttempt = activeTrace.attempts.length > 1 || attemptErrors.length > 0;
-    $("attempt-status").hidden = !showAttempt;
-    $("attempt-status").replaceChildren();
-    if (showAttempt) {
-      $("attempt-status").append(el("p", {}, `Attempt ${attempt.attempt} · ${attempt.status} · score ${score(attempt.reward)}` +
-        (attempt.selected ? "" : " · not scored")));
-      appendErrors($("attempt-status"), attemptErrors);
+  const messagesOf = (list) => list.filter((entry) => entry.kind === "message").map((entry) => entry.message);
+
+  // ---- Message rows.
+  async function copyText(button, text) {
+    try { await navigator.clipboard.writeText(text); button.dataset.state = "copied"; }
+    catch { button.dataset.state = "failed"; }
+    setTimeout(() => button.removeAttribute("data-state"), 1200);
+  }
+  function rowActions(textForCopy) {
+    const actions = el("span", { class: "msg-actions" });
+    if (textForCopy) {
+      const copy = el("button", { type: "button", class: "pv-icon-button", "aria-label": "Copy message" });
+      copy.append(icon("copy"));
+      copy.addEventListener("click", (event) => { event.preventDefault(); event.stopPropagation(); void copyText(copy, textForCopy()); });
+      actions.append(copy);
     }
-    const warnings = Array.isArray(attempt.warnings) ? attempt.warnings : [];
-    $("warnings-section").hidden = !warnings.length;
-    $("warnings-section").open = false;
-    $("warnings-title").textContent = `Warnings (${warnings.length})`;
-    $("warnings").replaceChildren(...warnings.map((warning) => el("li", {}, warning)));
-    const thinking = messages.map((message) => message.reasoning_content)
-      .filter((value) => typeof value === "string" && value.length).join("\n\n");
-    $("thinking-section").hidden = !thinking;
-    $("thinking").textContent = thinking;
-    $("calls-section").hidden = false;
-    $("calls-section").open = false;
-    renderCalls(trace?.calls || []);
-    prepareTools(trace, $("run-select").value, caseId);
-    renderConversation(messages);
+    const chevron = el("span", { class: "msg-chevron", "aria-hidden": "true" });
+    chevron.append(icon("down"));
+    actions.append(chevron);
+    return actions;
   }
-  function resetTrace() {
-    activeTrace = null;
-    $("trace-status").textContent = "";
-    $("attempt-control").hidden = true;
-    $("attempt-select").replaceChildren();
-    $("attempt-status").hidden = true;
-    $("warnings-section").hidden = true;
-    $("warnings-section").open = false;
-    $("warnings").replaceChildren();
-    $("thinking-section").hidden = true;
-    $("thinking").textContent = "";
-    $("tools-section").hidden = true;
-    $("tools-section").open = false;
-    $("tools-section").ontoggle = null;
-    $("tools").textContent = "";
-    $("calls-section").hidden = true;
-    $("calls-section").open = false;
-    $("calls").replaceChildren();
-    $("conversation").replaceChildren();
+  function imageFigure(path, label) {
+    const figure = el("figure");
+    const link = el("a", { href: path, target: "_blank", rel: "noopener" });
+    const image = el("img", { src: path, alt: label, loading: "lazy" });
+    image.addEventListener("error", () => image.replaceWith(el("p", { class: "msg-error" }, `Image unavailable: ${label}`)), { once: true });
+    link.append(image);
+    figure.append(link, el("figcaption", {}, label));
+    return figure;
   }
-  function prepareTools(trace, runId, request) {
-    const section = $("tools-section");
-    section.hidden = !trace;
-    section.open = false;
-    section.ontoggle = null;
-    $("tools").textContent = "";
-    if (!trace) return;
-    const isCurrent = () => request === caseId &&
-      activeTrace?.attempts[Number($("attempt-select").value)]?.traces?.[0] === trace;
+  function imageGallery(message) {
+    const images = messageImages(message);
+    if (!images.size) return null;
+    const gallery = el("div", { class: "msg-images" });
+    for (const [path, image] of images) {
+      const display = image.display_size, original = image.original_size;
+      const label = Array.isArray(display) && Array.isArray(original) ? `${Math.max(...display)} px of ${original.join("×")}` : "image";
+      gallery.append(imageFigure(path, label));
+    }
+    return gallery;
+  }
+  function callMeta(call) {
+    const parts = [];
+    if (Number.isFinite(call.time?.start) && Number.isFinite(call.time?.end)) parts.push(seconds(call.time.end - call.time.start));
+    for (const [key, label] of [["prompt_tokens", "prompt"], ["cached_input_tokens", "cached"], ["completion_tokens", "output"]]) {
+      if (Number.isFinite(call.usage?.[key])) parts.push(`${count(call.usage[key])} ${label}`);
+    }
+    if (!parts.length && call.error == null) return null;
+    const meta = el("div", { class: "msg-meta" }, parts.join(" · "));
+    if (call.error != null) meta.append(el("span", { class: "msg-error" }, ` error ${JSON.stringify(call.error)}`));
+    return meta;
+  }
+  function toolCallBlock(call) {
+    const block = el("div");
+    block.append(el("div", { class: "msg-tool-name" }, callName(call)));
+    for (const [name, value] of argumentFields(callArguments(call))) {
+      const field = el("div", { class: "msg-field" });
+      if (name !== null) field.append(el("div", { class: "msg-field-name" }, name));
+      field.append(el("pre", { class: "msg-code" }, value));
+      block.append(field);
+    }
+    return block;
+  }
+  function messageBody(message, call, raw) {
+    const body = el("div", { class: "msg-body" });
+    if (raw) {
+      body.append(el("pre", { class: "msg-code" }, JSON.stringify(message, null, 2)));
+    } else {
+      if (typeof message.reasoning_content === "string" && message.reasoning_content) {
+        const thinking = el("details", { class: "msg-thinking" });
+        thinking.append(el("summary", { title: activeTrace?.reasoning_notice ?? "" }, "thinking"), el("div", { class: "msg-text" }, message.reasoning_content));
+        body.append(thinking);
+      }
+      const text = textOf(message.content);
+      if (text) body.append(el(message.role === "tool" ? "pre" : "div", { class: message.role === "tool" ? "msg-code" : "msg-text" }, text));
+      for (const toolCall of toolCallsOf(message)) body.append(toolCallBlock(toolCall));
+    }
+    const gallery = imageGallery(message);
+    if (gallery) body.append(gallery);
+    const meta = call ? callMeta(call) : null;
+    if (meta) body.append(meta);
+    if (!body.children.length) body.append(el("div", { class: "msg-meta" }, "empty"));
+    return body;
+  }
+  function messageRow(message, call, toolNames, raw) {
+    const role = typeof message.role === "string" ? message.role : "message";
+    const details = el("details", { class: "msg", "data-role": role });
+    const label = el("span", { class: "msg-role" }, role);
+    const toolName = role === "tool" ? toolNames.get(message.tool_call_id) : undefined;
+    if (toolName) label.append(el("small", {}, toolName));
+    const summary = el("summary");
+    summary.append(label, el("span", { class: "msg-preview" }, previewOf(message)), rowActions(() => messageText(message)));
+    details.append(summary, messageBody(message, call, raw));
+    details.open = startsOpen(message, role);
+    return details;
+  }
+  function toolsRow(trace, request) {
+    const details = el("details", { class: "msg", "data-role": "tools" });
+    const summary = el("summary");
+    summary.append(el("span", { class: "msg-role" }, "tools"), el("span", { class: "msg-preview" }, "Tool definitions"), rowActions(null));
+    const output = el("pre", { class: "msg-code" }, "Loading…");
+    const body = el("div", { class: "msg-body" });
+    body.append(output);
+    details.append(summary, body);
+    const isCurrent = () => request === caseId && activeTrace?.attempts[Number($("attempt-select").value)]?.traces?.[0] === trace;
     let loaded = false;
-    section.ontoggle = async () => {
-      if (!section.open || loaded) return;
+    details.addEventListener("toggle", async () => {
+      if (!details.open || loaded) return;
       loaded = true;
       const ref = trace.tools_ref;
-      if (typeof ref !== "string" || !/^[a-f0-9]{16}$/.test(ref)) {
-        $("tools").textContent = "Tools unavailable.";
-        return;
-      }
-      const path = localPath(`data/${encodeURIComponent(runId)}/tools/${ref}.json`);
-      $("tools").textContent = "Loading…";
+      const path = typeof ref === "string" && /^[a-f0-9]{16}$/.test(ref) ? localPath(`data/${encodeURIComponent($("run-select").value)}/tools/${ref}.json`) : null;
+      if (!path) { output.textContent = "Tools unavailable."; return; }
       try {
         const tools = await fetchJson(path);
-        if (isCurrent()) $("tools").textContent = JSON.stringify(tools, null, 2);
+        if (isCurrent()) output.textContent = JSON.stringify(tools, null, 2);
       } catch (error) {
-        if (isCurrent()) $("tools").textContent = `Tools unavailable: ${error.message}`;
+        if (isCurrent()) output.textContent = `Tools unavailable: ${error.message}`;
       }
-    };
+    });
+    return details;
   }
-  async function loadCaseTrace(film, request) {
-    const path = localPath(film.trace_path);
-    if (!path) {
-      $("trace-status").textContent = "Trace unavailable.";
+  function renderConversation(trace, request) {
+    const container = $("conversation");
+    const raw = $("option-raw").checked;
+    rows = [];
+    noMatches = el("p", { class: "pv-empty" }, "No matches.");
+    noMatches.hidden = true;
+    if (!conversation.length) {
+      container.replaceChildren(el("p", { class: "pv-empty" }, "No messages."));
       return;
     }
-    try {
-      const trace = await fetchTrace(path);
-      if (request !== caseId) return;
-      if (trace.schema !== 2 || !Array.isArray(trace.attempts)) throw new Error(`${path}: unsupported trace schema`);
-      const selected = trace.attempts.findIndex((attempt) => attempt.selected === true);
-      if (selected < 0) throw new Error(`${path}: no selected attempt`);
-      activeTrace = trace;
-      trace.attempts.forEach((attempt, index) => {
-        $("attempt-select").append(el("option", { value: String(index) },
-          `Attempt ${attempt.attempt} · ${attempt.status === "success" ? score(attempt.reward) : attempt.status}${attempt.selected ? " · scored" : ""}`));
-      });
-      $("attempt-control").hidden = trace.attempts.length < 2;
-      renderAttempt(selected);
-    } catch (error) {
-      if (request !== caseId) return;
-      resetTrace();
-      $("trace-status").textContent = `Trace unavailable: ${error.message}`;
+    const toolNames = new Map();
+    const nodes = [];
+    if (trace) {
+      const row = toolsRow(trace, request);
+      rows.push({ element: row, haystack: "tools tool definitions" });
+      nodes.push(row);
     }
+    for (const entry of conversation) {
+      switch (entry.kind) {
+        case "divider": {
+          const divider = el("div", { class: "msg-divider", role: "separator" }, "new context");
+          rows.push({ element: divider, haystack: null });
+          nodes.push(divider);
+          break;
+        }
+        case "message": {
+          for (const call of toolCallsOf(entry.message)) toolNames.set(call.id, callName(call));
+          const row = messageRow(entry.message, entry.call, toolNames, raw);
+          rows.push({ element: row, haystack: `${entry.message.role}\n${messageText(entry.message)}\n${entry.message.reasoning_content ?? ""}`.toLowerCase() });
+          nodes.push(row);
+          break;
+        }
+        default:
+          throw new Error(`unknown conversation entry: ${entry.kind}`);
+      }
+    }
+    container.replaceChildren(...nodes, noMatches);
+    applySearch();
+  }
+  function applySearch() {
+    const query = $("search").value.trim().toLowerCase();
+    let shown = 0;
+    for (const row of rows) {
+      const visible = row.haystack === null ? query === "" : row.haystack.includes(query);
+      row.element.hidden = !visible;
+      if (visible && row.haystack !== null) shown += 1;
+    }
+    if (noMatches) noMatches.hidden = query === "" || shown > 0;
+  }
+
+  // ---- Overview.
+  function fillRows(id, pairs) {
+    const list = $(id);
+    list.replaceChildren(...pairs.map(([key, value]) => {
+      const row = el("div", { class: "pv-row" });
+      row.append(el("dt", {}, key), el("dd", {}, value));
+      return row;
+    }));
+    list.closest(".pv-sec").hidden = pairs.length === 0;
+  }
+  function showNotes(errors, warnings) {
+    for (const [id, items] of [["ov-errors", errors], ["ov-warnings", warnings]]) {
+      const section = $(id);
+      const unique = [...new Set(items.map((item) => typeof item === "string" ? item : JSON.stringify(item)))];
+      section.querySelector("ul").replaceChildren(...unique.map((text) => el("li", {}, text)));
+      section.hidden = unique.length === 0;
+    }
+  }
+  function renderTraceOverview(film, trace, messages) {
+    const metrics = Object.entries(trace?.rewards ?? {}).filter(([, result]) => Number.isFinite(result?.score));
+    fillRows("ov-metrics", metrics.map(([name, result]) => [name, score(result.score)]));
+    const calls = messages.flatMap(toolCallsOf).length;
+    fillRows("ov-activity", [
+      ["total entries", String(messages.length)],
+      ["user messages", String(messages.filter((message) => message.role === "user").length)],
+      ["model turns", String(messages.filter((message) => message.role === "assistant").length)],
+      ["tool calls", String(calls)],
+      ["tool results", String(messages.filter((message) => message.role === "tool").length)],
+      ["images viewed", Number.isFinite(film.images_viewed) ? String(film.images_viewed) : "—"],
+    ]);
+    const timed = (trace?.calls ?? []).filter((call) => Number.isFinite(call.time?.start) && Number.isFinite(call.time?.end));
+    if (timed.length) {
+      const total = Math.max(...timed.map((call) => call.time.end)) - Math.min(...timed.map((call) => call.time.start));
+      const model = timed.reduce((sum, call) => sum + (call.time.end - call.time.start), 0);
+      fillRows("ov-timing", [["total", seconds(total)], ["model", seconds(model)], ["other", seconds(Math.max(0, total - model))]]);
+    } else fillRows("ov-timing", []);
+    const sum = (key) => (trace?.calls ?? []).reduce((total, call) => total + (Number.isFinite(call.usage?.[key]) ? call.usage[key] : 0), 0);
+    const usage = [["prompt", sum("prompt_tokens")], ["cached", sum("cached_input_tokens")], ["output", sum("completion_tokens")]];
+    fillRows("ov-tokens", usage.some(([, value]) => value > 0) ? usage.map(([name, value]) => [name, count(value)]) : []);
   }
   function drawBoxes(layer, boxes, color, dashed) {
     for (const box of boxes) {
@@ -381,16 +640,7 @@
     if (dentistLayer) dentistLayer.style.display = $("show-dentists").checked ? "" : "none";
     if (modelLayer) modelLayer.style.display = $("show-model").checked ? "" : "none";
   }
-  function renderFilm(index) {
-    const film = films[index];
-    if (!film) return;
-    const request = ++caseId;
-    resetTrace();
-    $("case-select").value = String(index);
-    [...$("grid").children].forEach((button, i) => {
-      button.classList.toggle("sel", i === index);
-      button.setAttribute("aria-pressed", String(i === index));
-    });
+  function renderFilmImage(film) {
     const box = $("film");
     box.replaceChildren();
     const svg = svgEl("svg", { viewBox: "0 0 1 1", preserveAspectRatio: "none", "aria-hidden": "true" });
@@ -410,58 +660,142 @@
       box.append(image, svg);
     } else box.append(el("div", { class: "empty" }, "Image unavailable."));
     showLayers();
-    $("case-section").hidden = false;
-    $("case-title").textContent = `Case ${film.film}`;
-    const notes = [`score ${score(film.reward)}`, `${film.model_calls} calls`, `${film.images_viewed} images`];
-    if (film.status !== "success") notes.push(film.status);
-    if (!film.parsed) notes.push("not parsed");
-    if (film.stop_condition === "max_turns") notes.push("turn limit");
-    $("case-status").replaceChildren(el("p", {}, notes.join(" · ")));
-    appendErrors($("case-status"), film.errors);
-    $("reply").textContent = film.reply == null ? "No reply." : film.reply;
+  }
+  function statusText(film) {
+    const parts = [String(film.status)];
+    if (film.stop_condition === "max_turns") parts.push("turn limit");
+    if (!film.parsed) parts.push("not parsed");
+    return parts.join(" · ");
+  }
+  function renderFilmOverview(film) {
+    $("ov-score").textContent = score(film.reward);
+    $("ov-score").className = `pv-big ${tone(film.reward)}`;
+    renderFilmImage(film);
+    $("id-film").textContent = film.film;
+    $("id-status").textContent = statusText(film);
+    $("ov-answer").textContent = typeof film.reply === "string" && film.reply.trim() ? film.reply : "No reply.";
     const download = localPath(film.trace_path);
     $("trace-download").hidden = !download;
     if (download) $("trace-download").href = download;
     else $("trace-download").removeAttribute("href");
+    showNotes(listOf(film.errors), []);
+  }
+
+  // ---- Trace loading.
+  function renderAttempt(index) {
+    const attempt = activeTrace.attempts[index];
+    if (!attempt) return;
+    const film = films[filmIndex];
+    $("attempt-select").value = String(index);
+    const trace = attempt.traces?.[0];
+    const nodes = Array.isArray(trace?.nodes) ? trace.nodes : [];
+    conversation = nodes.length ? conversationOf(trace)
+      : (activeTrace.prompt ?? []).map((message) => ({ kind: "message", message, call: null }));
+    showNotes([...listOf(film.errors), ...listOf(attempt.errors)], listOf(attempt.warnings));
+    renderTraceOverview(film, trace, messagesOf(conversation));
+    renderConversation(trace, caseId);
+  }
+  function resetTrace() {
+    activeTrace = null;
+    conversation = [];
+    rows = [];
+    $("attempt-control").hidden = true;
+    $("attempt-select").replaceChildren();
+    for (const id of ["ov-metrics", "ov-activity", "ov-timing", "ov-tokens"]) fillRows(id, []);
+    showNotes([], []);
+  }
+  async function loadCaseTrace(film, request) {
+    const path = localPath(film.trace_path);
+    if (!path) {
+      $("conversation").replaceChildren(el("p", { class: "pv-empty" }, "Trace unavailable."));
+      return;
+    }
+    try {
+      const trace = await fetchTrace(path);
+      if (request !== caseId) return;
+      if (trace.schema !== 2 || !Array.isArray(trace.attempts)) throw new Error(`${path}: unsupported trace schema`);
+      const selected = trace.attempts.findIndex((attempt) => attempt.selected === true);
+      if (selected < 0) throw new Error(`${path}: no selected attempt`);
+      activeTrace = trace;
+      trace.attempts.forEach((attempt, index) => {
+        $("attempt-select").append(el("option", { value: String(index) },
+          `${attempt.attempt} · ${attempt.status === "success" ? score(attempt.reward) : attempt.status}${attempt.selected ? " · scored" : ""}`));
+      });
+      $("attempt-control").hidden = trace.attempts.length < 2;
+      renderAttempt(selected);
+    } catch (error) {
+      if (request !== caseId) return;
+      resetTrace();
+      $("conversation").replaceChildren(el("p", { class: "pv-empty" }, `Trace unavailable: ${error.message}`));
+    }
+  }
+
+  // ---- Films.
+  function setUrl(changes) {
+    const url = new URL(location.href);
+    for (const [key, value] of Object.entries(changes)) {
+      if (value === null) url.searchParams.delete(key);
+      else url.searchParams.set(key, value);
+    }
+    history.replaceState(null, "", url);
+  }
+  function revealItem(item) {
+    const list = $("film-list");
+    if (item.offsetTop < list.scrollTop) list.scrollTop = item.offsetTop - 8;
+    else if (item.offsetTop + item.offsetHeight > list.scrollTop + list.clientHeight) list.scrollTop = item.offsetTop + item.offsetHeight - list.clientHeight + 8;
+  }
+  function selectFilm(index, { focus = false, reveal = false } = {}) {
+    const film = films[index];
+    if (!film) return;
+    const request = ++caseId;
+    filmIndex = index;
+    resetTrace();
+    const items = [...$("film-list").children];
+    items.forEach((item, i) => item.setAttribute("aria-current", String(i === index)));
+    if (reveal) revealItem(items[index]);
+    if (focus) items[index].focus({ preventScroll: true });
+    $("film-position").textContent = `${index + 1}/${films.length}`;
+    $("film-prev").disabled = index === 0;
+    $("film-next").disabled = index === films.length - 1;
+    setUrl({ film: film.film });
+    renderFilmOverview(film);
+    $("conversation").replaceChildren(el("p", { class: "pv-empty" }, "Loading…"));
     void loadCaseTrace(film, request);
+  }
+  function renderFilmList() {
+    $("film-list").replaceChildren(...films.map((film, index) => {
+      const ok = film.status === "success" && Number.isFinite(film.reward);
+      const label = `Film ${film.film} · ${ok ? score(film.reward) : film.status}`;
+      const item = el("button", { type: "button", class: "pv-item", title: label, "aria-label": label, "aria-current": "false" });
+      item.append(el("span", {}, `#${film.film}`), el("b", { class: ok ? tone(film.reward) : "idle" }, ok ? film.reward.toFixed(2) : "—"));
+      item.addEventListener("click", () => selectFilm(index));
+      return item;
+    }));
   }
   function clearCases(message) {
     ++caseId;
     resetTrace();
     films = [];
+    filmIndex = -1;
     dentistLayer = modelLayer = null;
-    $("case-select").replaceChildren();
-    $("case-select").disabled = true;
-    $("grid").replaceChildren();
-    $("case-section").hidden = true;
-    $("conversation").replaceChildren();
+    $("film-list").replaceChildren();
+    $("film-position").textContent = "0/0";
+    $("film-prev").disabled = $("film-next").disabled = true;
     $("film").replaceChildren(el("div", { class: "empty" }, message));
+    $("ov-score").textContent = "—";
+    $("ov-score").className = "pv-big idle";
+    $("id-film").textContent = $("id-status").textContent = "—";
+    $("ov-answer").textContent = "";
+    $("trace-download").hidden = true;
+    $("conversation").replaceChildren(el("p", { class: "pv-empty" }, message));
   }
-  function renderGrid() {
-    const grid = $("grid");
-    const select = $("case-select");
-    films.forEach((film, index) => {
-      const label = `Case ${film.film} · ${film.status === "success" ? score(film.reward) : film.status}`;
-      const button = el("button", { type: "button", class: "cellbtn", title: label, "aria-label": label });
-      if (film.status !== "success" || !Number.isFinite(film.reward)) button.classList.add("noreply");
-      button.style.background = Number.isFinite(film.reward)
-        ? `var(--s${Math.max(0, Math.min(4, Math.round(film.reward * 4)))})` : "transparent";
-      button.addEventListener("click", () => renderFilm(index));
-      grid.append(button);
-      select.append(el("option", { value: String(index) }, label));
-    });
-    select.disabled = !films.length;
-    if (films.length) renderFilm(0);
-  }
-  async function loadRun() {
+  async function loadRun(requestedFilm = null) {
     const request = ++loadId;
     const entry = entries.find((item) => item.id === $("run-select").value);
     if (!entry) return;
     clearCases("Loading…");
     $("run-meta").textContent = complete(entry) ? `score ${score(entry.mean_reward)}` : `${entry.succeeded}/${entry.expected} films`;
-    const url = new URL(location.href);
-    url.searchParams.set("run", entry.id);
-    history.replaceState(null, "", url);
+    setUrl({ run: entry.id, film: null });
     try {
       const data = await fetchJson(`data/${encodeURIComponent(entry.id)}/evals/test_0000.json`);
       if (request !== loadId) return;
@@ -471,13 +805,55 @@
         clearCases(entry.reason || "No cases.");
         return;
       }
-      renderGrid();
+      renderFilmList();
+      selectFilm(Math.max(0, films.findIndex((film) => film.film === requestedFilm)), { reveal: true });
     } catch (error) {
       if (request !== loadId) return;
       clearCases(`Unavailable: ${error.message}`);
     }
   }
+
+  // ---- Controls.
+  function bindControls() {
+    for (const [id, name] of [["film-prev", "up"], ["film-next", "down"], ["copy-all", "copy"], ["answer-copy", "copy"]]) $(id).append(icon(name));
+    $("search-box").prepend(icon("search"));
+    $("options-button").append(icon("down"));
+    $("search-key").textContent = /Mac|iPhone|iPad/.test(navigator.userAgent) ? "⌘K" : "Ctrl K";
+    $("film-prev").addEventListener("click", () => selectFilm(filmIndex - 1, { reveal: true }));
+    $("film-next").addEventListener("click", () => selectFilm(filmIndex + 1, { reveal: true }));
+    $("film-list").addEventListener("keydown", (event) => {
+      const target = { ArrowUp: filmIndex - 1, ArrowDown: filmIndex + 1, Home: 0, End: films.length - 1 }[event.key];
+      if (target === undefined || !films.length) return;
+      event.preventDefault();
+      selectFilm(Math.max(0, Math.min(films.length - 1, target)), { focus: true, reveal: true });
+    });
+    $("collapse-all").addEventListener("click", () => rows.forEach((row) => { if (row.haystack !== null) row.element.open = false; }));
+    $("expand-all").addEventListener("click", () => rows.forEach((row) => { if (row.haystack !== null) row.element.open = true; }));
+    $("copy-all").addEventListener("click", () => void copyText($("copy-all"), JSON.stringify(messagesOf(conversation), null, 2)));
+    $("answer-copy").addEventListener("click", () => void copyText($("answer-copy"), $("ov-answer").textContent));
+    $("search").addEventListener("input", applySearch);
+    addEventListener("keydown", (event) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        $("search").focus();
+        $("search").select();
+      }
+    });
+    const menu = $("options-menu"), button = $("options-button");
+    const setMenu = (open) => { menu.hidden = !open; button.setAttribute("aria-expanded", String(open)); };
+    button.addEventListener("click", () => setMenu(menu.hidden));
+    document.addEventListener("click", (event) => { if (!menu.hidden && !menu.contains(event.target) && !button.contains(event.target)) setMenu(false); });
+    document.addEventListener("keydown", (event) => { if (event.key === "Escape") setMenu(false); });
+    $("option-raw").addEventListener("change", () => { if (activeTrace) renderConversation(activeTrace.attempts[Number($("attempt-select").value)]?.traces?.[0], caseId); });
+    for (const [id, name] of [["option-thinking", "thinking"], ["option-images", "images"]]) {
+      $(id).addEventListener("change", () => $("conversation").setAttribute(`data-${name}`, $(id).checked ? "on" : "off"));
+    }
+    $("attempt-select").addEventListener("change", () => renderAttempt(Number($("attempt-select").value)));
+    $("show-dentists").addEventListener("change", showLayers);
+    $("show-model").addEventListener("change", showLayers);
+  }
   async function main() {
+    bindControls();
     entries = await fetchJson("data/benchmarks.json");
     if (!Array.isArray(entries)) throw new Error("Invalid benchmark index");
     if (!entries.length) {
@@ -487,15 +863,11 @@
     }
     const select = $("run-select");
     for (const entry of entries) select.append(el("option", { value: entry.id }, complete(entry) ? entry.name : `${entry.name} · unfinished`));
-    const requested = new URLSearchParams(location.search).get("run");
-    if (entries.some((entry) => entry.id === requested)) select.value = requested;
+    const params = new URLSearchParams(location.search);
+    if (entries.some((entry) => entry.id === params.get("run"))) select.value = params.get("run");
     select.disabled = false;
-    select.addEventListener("change", loadRun);
-    $("attempt-select").addEventListener("change", () => renderAttempt(Number($("attempt-select").value)));
-    $("case-select").addEventListener("change", () => renderFilm(Number($("case-select").value)));
-    $("show-dentists").addEventListener("change", showLayers);
-    $("show-model").addEventListener("change", showLayers);
-    await loadRun();
+    select.addEventListener("change", () => loadRun());
+    await loadRun(params.get("film"));
   }
   main().catch((error) => {
     $("run-meta").textContent = `Unavailable: ${error.message}`;
