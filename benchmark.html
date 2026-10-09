@@ -4,16 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#000000">
-<title>PanoRead: dental X-ray benchmarks</title>
-<meta name="description" content="Dental X-ray benchmark scores from full model runs, with five selected trace examples per benchmark.">
-<link rel="canonical" href="https://dylantirandaz.com/periapical-rl/benchmark.html?benchmark=periapical-lesions">
+<title>PanoRead: can agents read dental X-rays?</title>
+<meta name="description" content="Coding agents find, box and grade periapical lesions on 200 real panoramic dental X-rays.">
+<link rel="canonical" href="https://dylantirandaz.com/periapical-rl/benchmark.html">
 <link rel="icon" href="favicon.ico" sizes="32x32">
 <link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://dylantirandaz.com/periapical-rl/benchmark.html?benchmark=periapical-lesions">
-<meta property="og:title" content="PanoRead: dental X-ray benchmarks">
-<meta property="og:description" content="Full-run scores and five selected trace examples per benchmark.">
+<meta property="og:url" content="https://dylantirandaz.com/periapical-rl/benchmark.html">
+<meta property="og:title" content="Can agents read dental X-rays?">
+<meta property="og:description" content="Coding agents read 200 panoramic dental X-rays.">
 <meta property="og:image" content="https://dylantirandaz.com/periapical-rl/assets/hero/14711.webp">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="fonts.css">
@@ -38,7 +38,7 @@
   .ci-in::before { left: 0; background: var(--bg); }
   .ci-out::after { right: 0; background: var(--ink-strong); }
   .bar-label { justify-self: end; max-width: 100%; padding-left: 14px; text-align: right; border: 0; }
-  a.bar-label:hover .bar-name { text-decoration: underline; text-underline-offset: 3px; }
+  .bar-label:hover .bar-name { text-decoration: underline; text-underline-offset: 3px; }
   .bar-name { display: block; font: 400 12px/13px var(--mono); color: var(--ink-strong); overflow-wrap: anywhere; }
   .bar-harness { display: block; font: 400 9px/9px var(--mono); color: var(--muted-2); }
   .axis { display: grid; grid-template-columns: var(--value-col) minmax(0, 1fr) var(--label-col); margin-top: 10px; font: 400 10px/14px var(--mono); color: var(--muted-2); }
@@ -96,17 +96,13 @@
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
 <header class="site-header"><div class="container">
-  <a class="brand" href="index.html"><b>PanoRead</b></a>
-  <nav class="site-nav" aria-label="Site"><a href="index.html">Benchmarks</a><a id="trace-nav" hidden>Five traces</a><a id="source-nav" class="optional" hidden>Source data</a></nav>
+  <a class="brand" href="benchmark.html"><b>PanoRead</b><span>.periapical</span></a>
+  <nav class="site-nav" aria-label="Site"><a href="benchmark.html" aria-current="page">Leaderboard</a><a href="traces.html">Traces</a><a class="optional" href="https://huggingface.co/datasets/tirandazdylan/periapical-lesions-pai">Data</a></nav>
 </div></header>
 
 <main id="main" class="container">
-  <nav class="benchmark-nav" id="benchmark-nav" aria-label="Benchmarks"></nav>
-  <p class="note" id="page-status" role="status">Loading benchmark…</p>
-  <noscript><p class="note">Enable JavaScript to load this benchmark. <a href="index.html">Benchmark directory</a> · <a href="data/catalog.json">Catalog</a> · <a href="data/benchmarks.json">Full-run data</a>.</p></noscript>
   <section class="hero" aria-labelledby="hero-title">
-    <h1 id="hero-title">Dental X-ray benchmarks</h1>
-    <p class="lede benchmark-description" id="benchmark-description"></p>
+    <h1 id="hero-title">Can agents read dental X-rays?</h1>
   </section>
 
   <div class="stage-wrap" id="stage-wrap" hidden>
@@ -118,18 +114,17 @@
     <div class="segments" id="segments" role="group" aria-label="Choose a film"></div>
   </div>
 
-  <nav class="tabs" id="section-tabs" aria-label="Sections" hidden>
+  <nav class="tabs" aria-label="Sections">
     <ul>
       <li><a class="tab" href="#leaderboard" aria-current="true">Leaderboard</a></li>
-      <li id="training-tab" hidden><a class="tab" href="#post-training">Post-training</a></li>
+      <li><a class="tab" href="#post-training">Post-training</a></li>
       <li><a class="tab" href="#method">Method</a></li>
     </ul>
   </nav>
 
-  <section class="block" id="leaderboard" aria-labelledby="leaderboard-title" style="margin-top: 28px;" hidden>
+  <section class="block" id="leaderboard" aria-labelledby="leaderboard-title" style="margin-top: 28px;">
     <h2 class="section-title" id="leaderboard-title">Leaderboard</h2>
-    <p class="section-sub" id="leaderboard-summary"></p>
-    <p class="note" id="score-note" hidden></p>
+    <p class="section-sub">Mean score, 200 films. Error bars: 95% interval.</p>
     <div class="bars" id="bars" aria-live="polite">
       <div class="bars-rows" id="bars-rows" role="list"></div>
       <div class="axis" aria-hidden="true"><div>score</div><div class="ticks"></div><div></div></div>
@@ -139,13 +134,11 @@
       <div class="unfinished-list" id="unfinished-rows" role="list"></div>
     </div>
     <p class="mono-note" id="benchmark-status" role="status" style="margin-top: 18px;"></p>
-    <p class="note"><a id="trace-link">View five selected traces</a>. These examples do not set the full-run scores.</p>
-    <p class="note" id="selection-note"></p>
+    <noscript><p class="note">Enable JavaScript to load the leaderboard. <a href="data/benchmarks.json">Read the data</a>.</p></noscript>
   </section>
 
-  <section class="block" id="post-training" aria-labelledby="training-title" hidden>
+  <section class="block" id="post-training" aria-labelledby="training-title">
     <h2 class="section-title" id="training-title">Post-training</h2>
-    <p class="note">This training study is separate from the agent leaderboard. It uses its own validation and test films.</p>
     <div class="ladder" id="ladder" aria-label="Validation score before training, after fine-tuning and after RL"></div>
     <p class="mono-note" id="ladder-note" style="margin-top: 10px;"></p>
     <div class="rl">
@@ -166,19 +159,25 @@
     </div>
   </section>
 
-  <section class="block" id="method" aria-labelledby="method-title" hidden>
+  <section class="block" id="method" aria-labelledby="method-title">
     <h2 class="section-title" id="method-title">Method</h2>
-    <dl class="kv" id="method-fields" style="margin-top: 22px;"></dl>
-    <p class="note">Research evaluation only. This is not a clinical product.</p>
+    <dl class="kv" style="margin-top: 22px;">
+      <dt>Task</dt><dd>Box each lesion, grade it PAI 3–5.</dd>
+      <dt>Score</dt><dd>½ lesion F1 + ½ graded F1, IoU ≥ 0.3</dd>
+      <dt>Agents</dt><dd>Codex (GPT-6 Astra), Claude Code (others), 50 turns</dd>
+      <dt>Films</dt><dd>First 200 of 387 test films, one try</dd>
+      <dt>Prompt</dt><dd>Task and answer format in the prompt; the answer is the agent's final reply.</dd>
+      <dt>Dentists</dt><dd>0.83: the source dentists annotated 59 films twice; the two annotations scored against each other (<a href="https://doi.org/10.1016/j.dib.2024.110486">Do et al. 2024</a>).</dd>
+    </dl>
   </section>
 </main>
 
 <footer class="site-footer"><div class="container">
   <div>
-    <a class="brand" href="index.html"><b>PanoRead</b></a>
+    <a class="brand" href="benchmark.html"><b>PanoRead</b><span>.periapical</span></a>
   </div>
   <div class="footer-aside">
-    <p id="source-credit">Full-run scores and selected trace examples.</p>
+    <p><a href="https://huggingface.co/datasets/tirandazdylan/periapical-lesions-pai">Dataset</a> · Films: Do et al. 2024, CC BY 4.0</p>
   </div>
 </div></footer>
 
@@ -197,8 +196,6 @@
   // Two dentists scoring each other on 59 films read twice.
   const DENTISTS_SCORE = 0.83;
   const SVG_NS = "http://www.w3.org/2000/svg";
-  const benchmarkId = new URLSearchParams(location.search).get("benchmark") ?? "periapical-lesions";
-  const isPeriapical = benchmarkId === "periapical-lesions";
 
   const $ = (id) => document.getElementById(id);
   const el = (tag, text, className) => {
@@ -311,13 +308,11 @@
       line.style.left = along(tick);
       overlay.append(line);
     }
-    if (isPeriapical) {
-      const line = el("i", undefined, "ref");
-      line.style.left = along(DENTISTS_SCORE);
-      const label = el("span", `dentists ${DENTISTS_SCORE.toFixed(2)}`, "ref-label");
-      label.style.left = along(DENTISTS_SCORE);
-      overlay.append(line, label);
-    }
+    const line = el("i", undefined, "ref");
+    line.style.left = along(DENTISTS_SCORE);
+    const label = el("span", `dentists ${DENTISTS_SCORE.toFixed(2)}`, "ref-label");
+    label.style.left = along(DENTISTS_SCORE);
+    overlay.append(line, label);
     return overlay;
   }
 
@@ -340,11 +335,8 @@
       outside.style.width = along(range[1] - entry.mean_reward);
       track.append(inside, outside);
     }
-    const label = el(entry.public_traces > 0 ? "a" : "span", undefined, "bar-label");
-    if (entry.public_traces > 0) {
-      label.href = `traces.html?benchmark=${encodeURIComponent(benchmarkId)}`;
-      label.setAttribute("aria-label", `${entry.name}: five selected traces`);
-    }
+    const label = el("a", undefined, "bar-label");
+    label.href = `traces.html?run=${encodeURIComponent(entry.id)}`;
     label.append(el("span", entry.name, "bar-name"));
     const films = entry.outcomes;
     row.title = [
@@ -362,7 +354,8 @@
     item.setAttribute("role", "listitem");
     const body = el("div");
     const head = el("div", undefined, "unfinished-head");
-    const link = el("span", entry.name);
+    const link = el("a", entry.name);
+    link.href = `traces.html?run=${encodeURIComponent(entry.id)}`;
     head.append(link, el("span", harness(entry), "bar-harness"));
     const bar = el("div", undefined, "unfinished-bar");
     const fill = el("span");
@@ -391,102 +384,32 @@
     }));
   }
 
-  async function fetchData(path) {
-    const response = await fetch(path, { cache: "no-store" });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
-  }
-
-  function showBenchmark(entry) {
-    document.title = `${entry.name} · PanoRead`;
-    const canonical = `https://dylantirandaz.com/periapical-rl/benchmark.html?benchmark=${encodeURIComponent(entry.id)}`;
-    document.querySelector('link[rel="canonical"]').href = canonical;
-    document.querySelector('meta[property="og:url"]').content = canonical;
-    document.querySelector('meta[property="og:title"]').content = document.title;
-    document.querySelector('meta[name="description"]').content = entry.description;
-    document.querySelector('meta[property="og:description"]').content = entry.description;
-    if (!isPeriapical) document.querySelector('meta[property="og:image"]').remove();
-    $("hero-title").textContent = entry.name;
-    $("benchmark-description").textContent = entry.description;
-    $("leaderboard-summary").textContent = `Full-run mean score · ${entry.evaluated_films} films per model. Scale: 0–1. Error bars show 95% intervals where available.`;
-    $("selection-note").textContent = entry.selection;
-    $("score-note").textContent = entry.score_note || "";
-    $("score-note").hidden = !entry.score_note;
-    for (const id of ["trace-nav", "trace-link"]) {
-      $(id).href = `traces.html?benchmark=${encodeURIComponent(entry.id)}`;
-      $(id).hidden = false;
-    }
-    $("source-nav").href = entry.source.url;
-    $("source-nav").hidden = false;
-    const fields = [
-      ["Task", entry.task], ["Score", entry.score], ["Protocol", entry.protocol],
-      ["Coverage", entry.coverage],
-      ["Films", `${entry.evaluated_films} evaluated films per model; ${entry.test_films} films in the full test split.`],
-    ];
-    $("method-fields").replaceChildren(...fields.flatMap(([name, text]) => [el("dt", name), el("dd", text)]));
-    if (isPeriapical) {
-      const reference = el("dd", "0.83: the source dentists annotated 59 films twice. The two annotations were scored against each other (");
-      const citation = el("a", "Do et al. 2024");
-      citation.href = "https://doi.org/10.1016/j.dib.2024.110486";
-      reference.append(citation, ").");
-      $("method-fields").append(el("dt", "Dentists"), reference);
-    }
-    const source = el("a", entry.source.name);
-    source.href = entry.source.url;
-    $("source-credit").replaceChildren(source, ` · ${entry.source.attribution} · ${entry.source.license}`);
-    for (const id of ["section-tabs", "leaderboard", "method"]) $(id).hidden = false;
-    $("page-status").hidden = true;
-  }
-
   async function load() {
-    const catalog = await fetchData("data/catalog.json");
-    if (!Array.isArray(catalog)) throw new Error("Invalid benchmark catalog");
-    $("benchmark-nav").replaceChildren(...catalog.map((entry) => {
-      const link = el("a", entry.short_name);
-      link.href = `benchmark.html?benchmark=${encodeURIComponent(entry.id)}`;
-      if (entry.id === benchmarkId) link.setAttribute("aria-current", "page");
-      return link;
-    }));
-    const selected = catalog.find((entry) => entry.id === benchmarkId);
-    if (!selected) {
-      document.title = "Unknown benchmark · PanoRead";
-      document.querySelector('link[rel="canonical"]').remove();
-      document.querySelector('meta[property="og:url"]').remove();
-      document.querySelector('meta[property="og:image"]').remove();
-      $("hero-title").textContent = "Unknown benchmark";
-      $("page-status").textContent = `No benchmark has the ID “${benchmarkId}”. Select a benchmark above.`;
-      return;
-    }
-    showBenchmark(selected);
-    if (isPeriapical) {
-      $("training-tab").hidden = false;
-      $("post-training").hidden = false;
-      loadHero().catch((error) => {
-        $("stage-wrap").hidden = false;
-        $("stage").replaceChildren(el("p", `Cannot load example films: ${error.message}`, "note load-error"));
-      });
-      loadTraining().catch((error) => {
-        $("ladder-note").textContent = `Cannot load post-training data: ${error.message}`;
-      });
-    }
-    try {
-      const allEntries = await fetchData("data/benchmarks.json");
-      if (!Array.isArray(allEntries)) throw new Error("Invalid benchmark index");
-      const entries = allEntries.filter((entry) => entry.benchmark === benchmarkId);
-      const ranked = entries.filter(complete).sort((a, b) => b.mean_reward - a.mean_reward);
-      const unfinished = entries.filter((entry) => !complete(entry)).sort((a, b) => b.succeeded - a.succeeded);
-      render(ranked);
-      $("unfinished").hidden = !unfinished.length;
+    const response = await fetch("data/benchmarks.json", { cache: "no-store" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const entries = await response.json();
+    if (!Array.isArray(entries)) throw new Error("Invalid benchmark index");
+    const ranked = entries.filter(complete).sort((a, b) => b.mean_reward - a.mean_reward);
+    const unfinished = entries.filter((entry) => !complete(entry)).sort((a, b) => b.succeeded - a.succeeded);
+
+    render(ranked);
+
+    if (unfinished.length) {
+      $("unfinished").hidden = false;
       $("unfinished-rows").replaceChildren(...unfinished.map(unfinishedRow));
-      $("benchmark-status").textContent = entries.length ? "" : "No benchmark runs are published.";
-    } catch (error) {
-      $("bars").hidden = true;
-      $("benchmark-status").textContent = `Cannot load full-run scores: ${error.message}.`;
     }
+    $("benchmark-status").textContent = entries.length ? "" : "No benchmark entries published.";
+
   }
 
   load().catch((error) => {
-    $("page-status").textContent = `Cannot load benchmark data: ${error.message}. Return to the benchmark directory or reload this page.`;
+    $("benchmark-status").textContent = `Cannot load benchmark data: ${error.message}.`;
+  });
+  loadHero().catch((error) => {
+    console.error(`Hero films unavailable: ${error.message}`);
+    const wrap = $("stage-wrap");
+    wrap.hidden = false;
+    $("stage").replaceChildren(el("p", `Hero films unavailable: ${error.message}`, "note load-error"));
   });
 
   // ---- Post-training: the ladder and the validation curve.
@@ -541,6 +464,10 @@
     }
     chart.replaceChildren(...parts);
   }
+  loadTraining().catch((error) => {
+    console.error(`Post-training data unavailable: ${error.message}`);
+    $("ladder-note").textContent = `Post-training data unavailable: ${error.message}`;
+  });
 
   // Underline the tab of the section in view.
   const tabs = [...document.querySelectorAll(".tab")];

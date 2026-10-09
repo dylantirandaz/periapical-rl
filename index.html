@@ -4,122 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#000000">
-<title>PanoRead: four dental X-ray benchmarks</title>
-<meta name="description" content="Four dental X-ray benchmarks. Read full-run model scores and five selected trace examples for each task.">
-<link rel="canonical" href="https://dylantirandaz.com/periapical-rl/">
+<title>PanoRead</title>
+<link rel="canonical" href="https://dylantirandaz.com/periapical-rl/benchmark.html">
 <link rel="icon" href="favicon.ico" sizes="32x32">
-<link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="32x32">
-<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://dylantirandaz.com/periapical-rl/">
-<meta property="og:title" content="PanoRead: four dental X-ray benchmarks">
-<meta property="og:description" content="Full-run model scores and five selected trace examples for each task.">
-<meta name="twitter:card" content="summary">
-<link rel="stylesheet" href="fonts.css">
-<link rel="stylesheet" href="site.css">
+<meta http-equiv="refresh" content="0; url=benchmark.html">
+<style>html { background: #000; color: #c8c8c8; font: 16px/24px Georgia, serif; } body { margin: 3rem 1.5rem; } a { color: inherit; }</style>
 </head>
 <body>
-<a class="skip-link" href="#main">Skip to content</a>
-<header class="site-header"><div class="container">
-  <a class="brand" href="index.html"><b>PanoRead</b></a>
-  <nav class="site-nav" aria-label="Site"><a href="index.html" aria-current="page">Benchmarks</a><a href="#about">About</a></nav>
-</div></header>
-<main id="main" class="container">
-  <section class="hero" aria-labelledby="directory-title">
-    <h1 id="directory-title">Can agents read dental X-rays?</h1>
-    <p class="lede benchmark-description">Four benchmarks. Four tasks. Select a benchmark to read its method, full-run scores and five selected trace examples.</p>
-  </section>
-  <p class="note" id="directory-status" role="status">Loading benchmarks…</p>
-  <div class="benchmark-grid" id="benchmark-grid"></div>
-  <noscript><p class="note">Enable JavaScript to load the directory. <a href="data/catalog.json">Read the benchmark catalog</a> and <a href="data/benchmarks.json">full-run data</a>.</p></noscript>
-  <section class="block" id="about" aria-labelledby="about-title">
-    <h2 class="section-title" id="about-title">Read each task on its own</h2>
-    <p class="note">Each leaderboard uses full model runs for one benchmark. There is no combined score across benchmarks. Tasks, answer protocols and scoring rules differ.</p>
-    <p class="note">Each benchmark has five score-stratified trace examples from its highest-scoring complete run. These are not random samples. The leaderboard means do not come from these five examples.</p>
-    <p class="note">Research evaluation only. This is not a clinical product.</p>
-  </section>
-</main>
-<footer class="site-footer"><div class="container">
-  <a class="brand" href="index.html"><b>PanoRead</b></a>
-  <div class="footer-aside"><p>See each benchmark for its source data, attribution and license.</p></div>
-</div></footer>
-<script>
-(() => {
-  const el = (tag, text, className) => {
-    const node = document.createElement(tag);
-    if (text !== undefined) node.textContent = text;
-    if (className) node.className = className;
-    return node;
-  };
-  const complete = (entry) => entry.status === "complete" && entry.expected > 0 &&
-    entry.succeeded === entry.expected && entry.errors === 0 && Number.isFinite(entry.mean_reward);
-  async function fetchData(path) {
-    const response = await fetch(path, { cache: "no-store" });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-    if (!Array.isArray(data)) throw new Error("Invalid data index");
-    return data;
-  }
-  function card(entry, runs, scoreError) {
-    const section = el("section", undefined, "block benchmark-card");
-    const title = el("h2", undefined, "section-title");
-    const link = el("a", entry.name);
-    link.href = `benchmark.html?benchmark=${encodeURIComponent(entry.id)}`;
-    title.append(link);
-    section.append(title, el("p", entry.description, "note"));
-    const ranked = runs.filter((run) => run.benchmark === entry.id && complete(run)).sort((a, b) => b.mean_reward - a.mean_reward);
-    section.append(el("p", `${entry.evaluated_films} evaluated films per model · ${entry.test_films} test films`, "mono-note"));
-    const summary = el("div", undefined, "benchmark-summary");
-    if (ranked.length) {
-      const table = el("table", undefined, "data");
-      const caption = el("caption", "Full-run mean scores · 0–1");
-      const head = el("thead");
-      const columns = el("tr");
-      for (const [text, className] of [["Model", ""], ["Score", "num"]]) {
-        const cell = el("th", text, className);
-        cell.scope = "col";
-        columns.append(cell);
-      }
-      head.append(columns);
-      const body = el("tbody");
-      for (const run of ranked) {
-        const row = el("tr");
-        row.append(el("td", run.name), el("td", run.mean_reward.toFixed(3), "num"));
-        body.append(row);
-      }
-      table.append(caption, head, body);
-      summary.append(table);
-    } else {
-      summary.append(el("p", scoreError ? "Cannot load full-run scores. Open the benchmark or reload this page." : "No complete runs are published.", "note"));
-    }
-    section.append(summary);
-    if (entry.score_note) section.append(el("p", entry.score_note, "note"));
-    const links = el("div", undefined, "benchmark-links");
-    const detail = el("a", "Leaderboard and method");
-    detail.href = link.href;
-    const traces = el("a", "Five selected traces");
-    traces.href = `traces.html?benchmark=${encodeURIComponent(entry.id)}`;
-    links.append(detail, traces);
-    section.append(links);
-    return section;
-  }
-  async function load() {
-    const [catalogResult, runsResult] = await Promise.allSettled([
-      fetchData("data/catalog.json"), fetchData("data/benchmarks.json"),
-    ]);
-    if (catalogResult.status === "rejected") throw catalogResult.reason;
-    const runs = runsResult.status === "fulfilled" ? runsResult.value : [];
-    document.getElementById("benchmark-grid").replaceChildren(...catalogResult.value.map((entry) => card(entry, runs, runsResult.status === "rejected")));
-    document.getElementById("directory-status").hidden = true;
-  }
-  load().catch((error) => {
-    document.getElementById("directory-status").textContent = `Cannot load the benchmark directory: ${error.message}. Reload this page to try again.`;
-  });
-  const header = document.querySelector(".site-header");
-  const update = () => header.toggleAttribute("data-scrolled", window.scrollY > 4);
-  addEventListener("scroll", update, { passive: true });
-  update();
-})();
-</script>
+<p><a href="benchmark.html">PanoRead leaderboard</a></p>
+<script>location.replace("benchmark.html");</script>
 </body>
 </html>
