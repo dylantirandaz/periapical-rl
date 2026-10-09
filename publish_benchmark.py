@@ -1,24 +1,23 @@
-"""Publish real Codex or Claude Code eval traces without private provider data.
+"""Build four public benchmarks from saved data, without model calls.
 
-Usage:
-    <env-venv>/python publish_benchmark.py <run-dir> --label "GPT-6 Astra"
+Requires Python 3.12, Pillow, and the production dental environment dependencies.
+Use the original six-run public data backup, not the reduced five-example site:
 
-Model, harness, version, case count and turn limit come from resolved/eval.json.
-The latest recorded attempt for each task is scored; every attempt remains in
-its public trace. Only full, successful test coverage gets aggregate scores.
-Pass means a reward of 1. Raw source files are never copied or changed. Public
-traces contain the original prompt and all message nodes, not private config,
-authentication data, encrypted reasoning, or signed sandbox URLs. Returned
-reasoning is public API output only, not a claim of full private reasoning.
+    python publish_benchmark.py --periapical-source /path/to/site-backup \\
+        --runs-root /path/to/saved-runs --production-root /path/to/dental-environments \\
+        --diagnosis-correction /path/to/diagnosis-rescore-0.3.1.json \\
+        --output /path/to/new-output
 
-Schema 2 stores messages only in per-case traces, tool schemas once per run,
-and 640-pixel WebP display copies in a shared, content-addressed image pool.
-Rows contain inspection counts, not duplicate conversations or reasoning.
+The output contains 12 full-run summaries and 20 selected traces. Scores use
+the complete source runs. Each sample uses five fixed ranks from the best run.
+Private provider data is removed; returned public reasoning is retained.
+Sources are read-only. An existing output directory is refused. After checking
+the output and the rendered site, replace only the site's generated data tree.
+This command does not deploy the site.
 """
 
 from __future__ import annotations
 
-import argparse
 import base64
 import binascii
 import hashlib
@@ -26,21 +25,17 @@ import io
 import json
 import math
 import re
-import shutil
-import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, TypedDict
 from urllib.parse import urlsplit
 
 from PIL import Image
-from periapical_lesions.taskset import REVISION, parse_lesions
 
 type Json = None | bool | int | float | str | list[Json] | dict[str, Json]
 type Object = dict[str, Json]
 
 SITE = Path(__file__).resolve().parent
-TEST_CASES = 387
 REDACTED = "[private data removed]"
 PRIVATE_KEY = re.compile(
     r"api[_-]?key|authorization|authentication|password|passwd|secret|"
@@ -59,11 +54,14 @@ class FilmRow(TypedDict):
     film: str
     task_key: str
     boxes: Json
-    pai: Json
-    lesions: Json
+    labels: Json
+    predictions: Json
     reward: float | None
     parsed: bool
     reply: str | None
+    answer_source: Literal["final_reply", "report.json"]
+    score_note: str | None
+    score_provenance: Object
     has_thinking: bool
     model_calls: int
     images_viewed: int
@@ -87,51 +85,6 @@ class RunConfig:
     route: str
     retries: Object
 
-    @classmethod
-    def load(cls, config: Object) -> RunConfig:
-        env = obj(config.get("env"), "config.env")
-        taskset = obj(env.get("taskset"), "config.env.taskset")
-        agent = obj(env.get("agent"), "config.env.agent")
-        harness = obj(agent.get("harness"), "config.env.agent.harness")
-        model = text(agent.get("model") or config.get("model"), "resolved model")
-        harness_id = text(harness.get("id"), "harness id")
-        if harness_id not in {"codex", "claude_code"}:
-            raise ValueError("Only real Codex or Claude Code runs can be published")
-        if taskset.get("id") != "periapical-lesions" or taskset.get("split") != "test":
-            raise ValueError("Only the periapical-lesions test split can be published")
-        if agent.get("max_turns") != 50:
-            raise ValueError("The benchmark requires max_turns=50")
-        if config.get("num_rollouts") != 1:
-            raise ValueError("The benchmark requires one rollout per task, not best-of-N")
-        count = config.get("num_tasks")
-        expected = TEST_CASES if count is None else integer(count, "num_tasks")
-        if not 1 <= expected <= TEST_CASES:
-            raise ValueError("Requested case count is outside the pinned test split")
-        revision = taskset.get("revision", REVISION)
-        if revision != REVISION:
-            raise ValueError("Dataset revision differs from the installed scoring taskset")
-        client = obj(agent.get("client") or config.get("client"), "resolved client")
-        endpoint = urlsplit(text(client.get("base_url"), "client.base_url"))
-        if endpoint.scheme == "https" and endpoint.hostname == "api.pinference.ai":
-            route = "Prime Inference"
-        elif (endpoint.scheme, endpoint.netloc, endpoint.path.rstrip("/")) == (
-            "https", "tinker.thinkingmachines.dev", "/services/tinker-prod/anthropic/api"
-        ):
-            route = "Tinker Anthropic-compatible API"
-        elif (endpoint.scheme, endpoint.netloc, endpoint.path.rstrip("/")) == (
-            "http", "127.0.0.1:18081", "/api/v1"
-        ):
-            route = "Prime Inference through gemini_gateway_adapter.py"
-        else:
-            raise ValueError("Unknown inference route in resolved client.base_url")
-        retries = obj(env.get("retries", {"max_retries": 0, "include": []}), "env.retries")
-        retry_count = integer(retries.get("max_retries", 0), "env.retries.max_retries")
-        retry_types = items(retries.get("include", []), "env.retries.include")
-        if retry_count < 0 or not all(isinstance(item, str) for item in retry_types):
-            raise ValueError("Invalid retry policy in resolved env.retries")
-        return cls(model, harness_id, text(harness.get("version"), "harness version"),
-                   expected, 50, REVISION, route,
-                   {"max_retries": retry_count, "include": retry_types})
 
 
 def value(raw: object) -> Json:
@@ -185,17 +138,12 @@ def dump(path: Path, payload: object) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, allow_nan=False, separators=(",", ":")))
 
 
-def slug(model: str, harness: str) -> str:
-    return "benchmark-" + re.sub(r"[^a-z0-9-]+", "-", model.split("/")[-1].lower()).strip("-") + "-" + harness
-
-
-
-
 class PublicTrace:
     """Keep public message content; remove private fields at every nesting level."""
 
-    def __init__(self, directory: Path, config: Object) -> None:
+    def __init__(self, directory: Path, config: Object, output_root: Path) -> None:
         self.directory = directory
+        self.output_root = output_root
         self.secrets: set[str] = set()
         self.errors: list[str] = []
         self.images: dict[str, Object] = {}
@@ -240,11 +188,11 @@ class PublicTrace:
         except (ValueError, binascii.Error, OSError, Image.DecompressionBombError):
             self.errors.append("An embedded image could not be exported")
             return "[image unavailable]"
-        target = SITE / "data" / "images" / (hashlib.sha256(saved).hexdigest() + ".webp")
+        target = self.output_root / "data" / "images" / (hashlib.sha256(saved).hexdigest() + ".webp")
         target.parent.mkdir(parents=True, exist_ok=True)
         if not target.exists():
             target.write_bytes(saved)
-        result: Object = {"type": "url", "url": target.relative_to(SITE).as_posix(),
+        result: Object = {"type": "url", "url": target.relative_to(self.output_root).as_posix(),
                           "original_size": list(original_size), "display_size": list(display_size),
                           "original_bytes": len(payload)}
         self.images[source_hash] = result
@@ -269,6 +217,7 @@ class PublicTrace:
         source = re.sub(r"(?i)\bBearer\s+[A-Za-z0-9._~+/=-]+", REDACTED, source)
         source = re.sub(r"(?i)((?:[a-z0-9_]*(?:api_key|access_token|auth_token|password|secret)[a-z0-9_]*|authorization)[\"']?\s*[=:]\s*)(?:\"[^\"]*\"|'[^']*'|[^\s,;}]+)", lambda match: match.group(1) + REDACTED, source)
         source = re.sub(r"\b(?:sk-[A-Za-z0-9_-]{8,}|gAAAA[A-Za-z0-9_=-]{30,}|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)", REDACTED, source)
+        source = re.sub(r"/(?:Users|home)/[^\s<>\"']+", "[private path removed]", source)
 
         def safe_url(match: re.Match[str]) -> str:
             url = match.group()
@@ -331,47 +280,6 @@ def image_paths(source: Json) -> set[str]:
     return result
 
 
-def readable_lesions(reply: str | None, lesions: list[Json]) -> bool:
-    """Distinguish a valid empty lesion list from the scorer's empty fallback."""
-    if reply is None:
-        return False
-    match = re.search(r"\{.*\}", reply, re.DOTALL)
-    if match is None:
-        return False
-    try:
-        payload = value(json.loads(match.group()))
-        if not isinstance(payload, dict):
-            return False
-        source = payload.get("lesions")
-        return isinstance(source, list) and len(source) == len(lesions)
-    except ValueError:
-        return False
-
-
-def final_reply(trace: Object) -> str | None:
-    # Match verifiers.Trace.last_reply: last sampled assistant, not last node,
-    # prompt-supplied assistant, last tool result, or an earlier JSON answer.
-    for raw in reversed(items(trace.get("nodes", []), "trace.nodes")):
-        node = obj(raw, "trace node")
-        message = obj(node.get("message"), "node.message")
-        if node.get("sampled") is True and message.get("role") == "assistant":
-            content = message.get("content")
-            if content is None:
-                return ""
-            if not isinstance(content, str):
-                raise ValueError("Sampled assistant content is not text")
-            return content.strip()
-    return None
-
-
-def ended_mid_tool_call(trace: Object) -> bool:
-    """True when the last sampled assistant turn still waits for a tool result."""
-    for raw in reversed(items(trace.get("nodes", []), "trace.nodes")):
-        node = obj(raw, "trace node")
-        message = obj(node.get("message"), "node.message")
-        if node.get("sampled") is True and message.get("role") == "assistant":
-            return bool(message.get("tool_calls"))
-    return False
 
 
 def error_messages(source: Object, cleaner: PublicTrace) -> list[str]:
@@ -388,10 +296,10 @@ def error_messages(source: Object, cleaner: PublicTrace) -> list[str]:
 
 def score(trace: Object) -> float:
     rewards = obj(trace.get("rewards"), "trace.rewards")
-    if set(rewards) != {"lesion_f1", "pai_f1"}:
-        raise ValueError("Both benchmark reward components are required")
+    if set(rewards) != {"box_f1", "label_f1"}:
+        raise ValueError("Both worklist reward components are required")
     total = 0.0
-    for name in ("lesion_f1", "pai_f1"):
+    for name in ("box_f1", "label_f1"):
         reward = obj(rewards[name], name)
         number = reward.get("score")
         if isinstance(number, bool) or not isinstance(number, (int, float)) or not 0 <= number <= 1:
@@ -416,8 +324,10 @@ def task_identity(record: Object, line: int) -> str:
 
 
 def film_row(key: str, records: list[tuple[int, Object]], config: RunConfig,
-             directory: Path, resolved: Object) -> FilmRow:
-    cleaner = PublicTrace(directory, resolved)
+             directory: Path, resolved: Object, output_root: Path,
+             labels: Json, predictions: list[Json], parsed: bool,
+             score_note: str | None, score_provenance: Object) -> FilmRow:
+    cleaner = PublicTrace(directory, resolved, output_root)
     for _, record in records:
         for raw_trace in items(record.get("traces", []), "record.traces"):
             cleaner.collect_secrets(obj(raw_trace, "trace").get("agent"))
@@ -478,6 +388,8 @@ def film_row(key: str, records: list[tuple[int, Object]], config: RunConfig,
                                   "nodes": nodes, "tools_ref": cleaner.tools(trace.get("tools", [])),
                                   "calls": calls,
                                   "rewards": cleaner.clean(trace.get("rewards", {})),
+                                  "metrics": cleaner.clean(trace.get("metrics", {})),
+                                  "score_provenance": cleaner.clean(trace.get("score_provenance")),
                                   "errors": error_messages(trace, cleaner)})
         has_thinking = attempt_has_thinking
         model_calls = attempt_calls
@@ -503,14 +415,13 @@ def film_row(key: str, records: list[tuple[int, Object]], config: RunConfig,
                 harness = obj(agent.get("harness"), "trace harness")
                 if (agent.get("model"), harness.get("id"), harness.get("version"), agent.get("max_turns")) != (config.model, config.harness, config.harness_version, config.max_turns):
                     raise ValueError("Trace agent differs from the resolved run config")
-                reply = final_reply(trace)
+                reply = obj(trace.get("info", {}), "trace.info").get("submitted")
+                if reply is not None and not isinstance(reply, str):
+                    raise ValueError("The saved report must be text or null")
                 if trace.get("ok") is not True or trace.get("is_completed") is not True:
                     raise ValueError("The agent trace did not finish successfully")
-                if reply is None:
-                    raise ValueError("No sampled assistant reply was recorded")
-                if trace.get("stop_condition") == "agent_completed" and ended_mid_tool_call(trace):
-                    # The turn limit is labelled max_turns. This label with a pending tool call means the harness or its connection died.
-                    raise ValueError("The agent stopped during a tool call without a final answer")
+                if not reply:
+                    warnings.append("No report.json content was saved. The production scorer treats this as an empty report.")
                 reward = score(trace)
             except ValueError as error:
                 errors.append(cleaner.string(str(error)))
@@ -529,25 +440,27 @@ def film_row(key: str, records: list[tuple[int, Object]], config: RunConfig,
     selected_errors = list(dict.fromkeys(selected_errors + cleaner.errors))
     if selected_errors:
         selected_reward = None
-    lesions = items(value(parse_lesions(selected_reply or "")), "parsed lesions")
-    parsed = readable_lesions(selected_reply, lesions)
+    if cleaner.errors:
+        raise ValueError("; ".join(cleaner.errors))
     filename = hashlib.sha256(key.encode()).hexdigest() + ".json"
     trace_path = directory / "traces" / filename
     dump(trace_path, {"schema": 2, "task_key": key, "film": cleaner.clean(data.get("name")),
-                      "prompt": clean_prompt, "boxes": data.get("boxes", []), "pai": data.get("pai", []),
-                      "attempts": public_attempts,
+                      "prompt": clean_prompt, "boxes": data.get("boxes", []), "labels": labels,
+                      "answer_source": "report.json", "score_note": score_note,
+                      "score_provenance": score_provenance, "attempts": public_attempts,
                       "reasoning_notice": "Only reasoning returned by the API is shown. Private encrypted reasoning is not included."})
 
 
     safe_reply = cleaner.string(selected_reply) if selected_reply is not None else None
     return {"film": cleaner.string(text(data.get("name"), "film name")), "task_key": key,
-            "boxes": data.get("boxes", []), "pai": data.get("pai", []), "lesions": lesions,
-            "reward": selected_reward, "parsed": parsed, "reply": safe_reply,
+            "boxes": data.get("boxes", []), "labels": labels, "predictions": cleaner.clean(predictions),
+            "reward": selected_reward, "parsed": parsed, "reply": safe_reply if selected_reply else None,
+            "answer_source": "report.json", "score_note": score_note, "score_provenance": score_provenance,
             "has_thinking": has_thinking, "model_calls": model_calls, "images_viewed": images_viewed,
             "status": "error" if selected_errors else "success", "errors": selected_errors,
             "warnings": selected_warnings,
             "stop_condition": selected_stop,
-            "trace_path": trace_path.relative_to(SITE).as_posix(),
+            "trace_path": trace_path.relative_to(output_root).as_posix(),
             "image_path": next(iter(sorted(prompt_images)), None), "attempts": attempts}
 
 
@@ -568,70 +481,7 @@ def wilson_interval(successes: int, total: int, z: float = 1.96) -> list[float]:
     return [max(0.0, centre - half), min(1.0, centre + half)]
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("run_dir", type=Path)
-    parser.add_argument("--label", required=True, help="Short display name; not a model override")
-    parser.add_argument("--config", type=Path, help="Resolved config to publish with. Default: <run_dir>/configs/resolved/eval.json")
-    args = parser.parse_args()
-    resolved = obj(load(args.config or args.run_dir / "configs" / "resolved" / "eval.json"), "resolved config")
-    config = RunConfig.load(resolved)
-    run_id = slug(config.model, config.harness)
-    directory = SITE / "data" / run_id
-    # Rebuild the run from its source traces so no image or trace from an earlier publish stays behind.
-    shutil.rmtree(directory, ignore_errors=True)
-    grouped: dict[str, list[tuple[int, Object]]] = {}
-    with (args.run_dir / "traces.jsonl").open() as stream:
-        for line, raw in enumerate(stream, 1):
-            if not raw.strip():
-                continue
-            try:
-                record = obj(value(json.loads(raw)), "record")
-                key = task_identity(record, line)
-            except ValueError as error:
-                # Refuse the entire publish instead of hiding a corrupt/partial record.
-                raise ValueError(f"Cannot publish trace line {line}: {error}") from error
-            grouped.setdefault(key, []).append((line, record))
-    films = [film_row(key, records, config, directory, resolved) for key, records in grouped.items()]
-    attempted = len(films)
-    succeeded = sum(film["status"] == "success" for film in films)
-    errors = attempted - succeeded
-    complete = attempted == succeeded == config.expected
-    status = "complete" if complete else "partial" if succeeded else "failed" if attempted else "blocked"
-    rewards = [film["reward"] for film in films if film["reward"] is not None]
-    pass_count = sum(reward == 1.0 for reward in rewards)
-    reason = None if complete else f"{succeeded}/{config.expected} requested cases scored; {attempted} unique cases attempted; {errors} case errors."
-    if attempted > config.expected:
-        reason = "Recorded unique tasks exceed the resolved requested count. " + (reason or "")
-    entry: Object = {"id": run_id, "name": PublicTrace(directory, resolved).string(args.label),
-                     "model": config.model, "harness": config.harness,
-                     "harness_version": config.harness_version, "split": "test",
-                     "expected": config.expected, "attempted": attempted, "succeeded": succeeded,
-                     "errors": errors, "films": attempted, "status": status,
-                     "mean_reward": sum(rewards) / config.expected if complete else None,
-                     "pass_rate": pass_count / config.expected if complete else None,
-                     "pass_count": pass_count, "updated": int(time.time()), "reason": reason,
-                     "max_turns": config.max_turns, "dataset_revision": config.dataset_revision,
-                     "attempt_count": sum(len(records) for records in grouped.values()),
-                     "extra_attempts": sum(len(records) for records in grouped.values()) - attempted,
-                     "turn_limit_stops": sum(film["stop_condition"] == "max_turns" for film in films),
-                     "route": config.route, "retries": config.retries,
-                     "selection_policy": "Latest recorded attempt for each stable task identity",
-                     "full_test_split": config.expected == TEST_CASES,
-                     "mean_reward_ci95": mean_interval(rewards) if complete else None,
-                     "pass_rate_ci95": wilson_interval(pass_count, config.expected) if complete else None,
-                     "outcomes": {"pass": pass_count, "partial": sum(0 < reward < 1 for reward in rewards),
-                                  "zero": sum(reward == 0 for reward in rewards)} if complete else None,
-                     "avg_model_calls": sum(film["model_calls"] for film in films) / attempted if complete else None}
-    dump(directory / "evals" / "test_0000.json", films)
-    dump(directory / "summary.json", {**entry, "stage": "benchmark", "eval_views": ["test_0000"]})
-    index_path = SITE / "data" / "benchmarks.json"
-    index = items(load(index_path), "benchmark index") if index_path.exists() else []
-    index = [item for item in index if obj(item, "benchmark entry").get("id") != run_id]
-    index.append(entry)
-    dump(index_path, index)
-    print(f"{run_id}: {status}; {succeeded}/{config.expected} cases scored; {errors} case errors")
-
-
 if __name__ == "__main__":
+    from publish_catalog import main
+
     main()

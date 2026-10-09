@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://dylantirandaz.com/periapical-rl/benchmark.html</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
-  <url><loc>https://dylantirandaz.com/periapical-rl/traces.html</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://dylantirandaz.com/periapical-rl/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://dylantirandaz.com/periapical-rl/benchmark.html?benchmark=periapical-lesions</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://dylantirandaz.com/periapical-rl/benchmark.html?benchmark=dentex-diagnosis</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://dylantirandaz.com/periapical-rl/benchmark.html?benchmark=dentex-enumeration</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://dylantirandaz.com/periapical-rl/benchmark.html?benchmark=pediatric-dental-disease</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://dylantirandaz.com/periapical-rl/traces.html?benchmark=periapical-lesions</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://dylantirandaz.com/periapical-rl/traces.html?benchmark=dentex-diagnosis</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://dylantirandaz.com/periapical-rl/traces.html?benchmark=dentex-enumeration</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://dylantirandaz.com/periapical-rl/traces.html?benchmark=pediatric-dental-disease</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
 </urlset>

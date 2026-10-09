@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#000000">
 <title>Traces · PanoRead</title>
-<meta name="description" content="Agent traces: every message, tool call and image.">
+<meta name="description" content="Five selected agent traces for each of four dental benchmarks, with messages, tool calls, images and scores.">
 <link rel="canonical" href="https://dylantirandaz.com/periapical-rl/traces.html">
 <link rel="icon" href="favicon.ico" sizes="32x32">
 <link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="32x32">
@@ -13,7 +13,7 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://dylantirandaz.com/periapical-rl/traces.html">
 <meta property="og:title" content="PanoRead traces">
-<meta property="og:description" content="Every message, tool call and image from the agents' runs.">
+<meta property="og:description" content="Five selected traces per dental benchmark, in the PanoRead trace viewer.">
 <meta property="og:image" content="https://dylantirandaz.com/periapical-rl/assets/hero/14711.webp">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="fonts.css">
@@ -36,6 +36,9 @@
   .pv-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding-bottom: 4px; }
   .pv-controls label { display: flex; align-items: center; gap: 8px; }
   .pv-controls .mono-note { margin: 0; }
+  .pv-controls label { flex-wrap: wrap; min-width: 0; }
+  .pv-controls .field { max-width: 100%; }
+  .pv-sample-note { max-width: 100%; margin: 12px 0 0; font: 400 12px/19px var(--ui); color: var(--px-soft); }
 
   .pv { display: grid; grid-template-columns: 224px minmax(0, 1fr) clamp(300px, 27vw, 380px); grid-template-areas: "films chat overview"; grid-template-rows: minmax(0, 1fr); height: clamp(560px, calc(100vh - 168px), 980px); margin-top: 16px; overflow: hidden; border: 1px solid var(--glass-line); border-radius: 16px; background: var(--glass); backdrop-filter: blur(18px) saturate(1.25); font: 400 14px/22px var(--ui); color: var(--px-text); }
   .pv-films { grid-area: films; } .pv-chat { grid-area: chat; } .pv-overview { grid-area: overview; }
@@ -168,18 +171,19 @@
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
 <header class="site-header"><div class="container">
-  <a class="brand" href="benchmark.html"><b>PanoRead</b><span>.periapical</span></a>
-  <nav class="site-nav" aria-label="Site"><a href="benchmark.html">Leaderboard</a><a href="traces.html" aria-current="page">Traces</a><a class="optional" href="https://huggingface.co/datasets/tirandazdylan/periapical-lesions-pai">Data</a></nav>
+  <a class="brand" href="index.html"><b>PanoRead</b><span>.benchmarks</span></a>
+  <nav class="site-nav" aria-label="Site"><a href="index.html">Benchmarks</a><a id="benchmark-link" href="benchmark.html">Leaderboard</a><a id="traces-link" href="traces.html" aria-current="page">Traces</a><a id="dataset-link" class="optional" hidden>Data</a></nav>
 </div></header>
 
 <main id="main" class="container">
   <div class="pv-top">
-    <h1 class="title">Traces</h1>
+    <h1 class="title" id="trace-title">Traces</h1>
     <div class="pv-controls">
-      <label class="eyebrow">Model <select class="field" id="run-select" disabled></select></label>
+      <label class="eyebrow">Benchmark <select class="field" id="benchmark-select" disabled></select></label>
       <span class="mono-note" id="run-meta" role="status"></span>
     </div>
   </div>
+  <p class="pv-sample-note" id="sample-note"></p>
 
   <div class="pv" aria-label="Trace viewer">
     <aside class="pv-films" aria-label="Films">
@@ -225,7 +229,7 @@
         <div class="pv-filmbox">
           <div class="film" id="film"><div class="empty">Loading…</div></div>
           <div class="pv-legend legend">
-            <label><input id="show-dentists" type="checkbox" checked><i class="box" style="--dot:var(--box-dentist)"></i>dentists</label>
+            <label><input id="show-dentists" type="checkbox" checked><i class="box" style="--dot:var(--box-dentist)"></i>reference</label>
             <label><input id="show-model" type="checkbox" checked><i class="box dashed" style="--dot:var(--box-model)"></i>model</label>
           </div>
         </div>
@@ -239,7 +243,7 @@
         </section>
         <section class="pv-sec" hidden><h3>metrics</h3><dl class="pv-rows" id="ov-metrics"></dl></section>
         <section class="pv-sec" hidden><h3>activity</h3><dl class="pv-rows" id="ov-activity"></dl></section>
-        <section class="pv-sec"><div class="pv-sec-head"><h3>answer</h3><button type="button" class="pv-icon-button" id="answer-copy" aria-label="Copy answer"></button></div><pre class="pv-pre" id="ov-answer" tabindex="0" aria-label="Final answer"></pre></section>
+        <section class="pv-sec"><div class="pv-sec-head"><h3 id="answer-title">scored answer</h3><button type="button" class="pv-icon-button" id="answer-copy" aria-label="Copy answer"></button></div><pre class="pv-pre" id="ov-answer" tabindex="0" aria-label="Scored answer"></pre></section>
         <section class="pv-sec" hidden><h3>timing</h3><dl class="pv-rows" id="ov-timing"></dl></section>
         <section class="pv-sec" hidden><h3>tokens</h3><dl class="pv-rows" id="ov-tokens"></dl></section>
         <section class="pv-sec" id="ov-errors" hidden><h3>errors</h3><ul class="pv-notes fail"></ul></section>
@@ -252,10 +256,10 @@
 
 <footer class="site-footer"><div class="container">
   <div>
-    <a class="brand" href="benchmark.html"><b>PanoRead</b><span>.periapical</span></a>
+    <a class="brand" href="index.html"><b>PanoRead</b><span>.benchmarks</span></a>
   </div>
   <div class="footer-aside">
-    <p><a href="https://huggingface.co/datasets/tirandazdylan/periapical-lesions-pai">Dataset</a> · Films: Do et al. 2024, CC BY 4.0</p>
+    <p id="source-credit">Dataset sources are listed on each benchmark page.</p>
   </div>
 </div></footer>
 
@@ -313,6 +317,7 @@
 
   // ---- State. `conversation` is what the middle panel shows; `rows` are its DOM rows, for search.
   let entries = [], films = [], filmIndex = -1, loadId = 0, caseId = 0;
+  let catalog = [], selection = null;
   let activeTrace = null, conversation = [], rows = [], noMatches = null;
   let dentistLayer = null, modelLayer = null;
   const traceCache = new Map();
@@ -527,6 +532,8 @@
     return details;
   }
   function toolsRow(trace, request) {
+    const runId = selection?.entry.id;
+    if (runId === undefined) throw new Error("No sample run is selected");
     const details = el("details", { class: "msg", "data-role": "tools" });
     const summary = el("summary");
     summary.append(el("span", { class: "msg-role" }, "tools"), el("span", { class: "msg-preview" }, "Tool definitions"), chevron());
@@ -540,7 +547,7 @@
       if (!details.open || loaded) return;
       loaded = true;
       const ref = trace.tools_ref;
-      const path = typeof ref === "string" && /^[a-f0-9]{16}$/.test(ref) ? localPath(`data/${encodeURIComponent($("run-select").value)}/tools/${ref}.json`) : null;
+      const path = typeof ref === "string" && /^[a-f0-9]{16}$/.test(ref) ? localPath(`data/${encodeURIComponent(runId)}/tools/${ref}.json`) : null;
       if (!path) { output.textContent = "Tools unavailable."; return; }
       try {
         const tools = await fetchJson(path);
@@ -641,13 +648,17 @@
     const usage = [["prompt", sum("prompt_tokens")], ["cached", sum("cached_input_tokens")], ["output", sum("completion_tokens")]];
     fillRows("ov-tokens", usage.some(([, value]) => value > 0) ? usage.map(([name, value]) => [name, count(value)]) : []);
   }
-  function drawBoxes(layer, boxes, color, dashed) {
-    for (const box of boxes) {
+  function drawBoxes(layer, boxes, labels, color, dashed) {
+    for (const [index, box] of boxes.entries()) {
       if (!Array.isArray(box) || box.length !== 4 || !box.every(Number.isFinite)) continue;
       const [x0, y0, x1, y1] = box;
-      layer.append(svgEl("rect", { x: x0, y: y0, width: Math.max(0, x1 - x0),
+      const rectangle = svgEl("rect", { x: x0, y: y0, width: Math.max(0, x1 - x0),
         height: Math.max(0, y1 - y0), fill: "none", stroke: color, "stroke-width": 2.5,
-        "stroke-dasharray": dashed ? "6 3" : "none", "vector-effect": "non-scaling-stroke" }));
+        "stroke-dasharray": dashed ? "6 3" : "none", "vector-effect": "non-scaling-stroke" });
+      const title = svgEl("title", {});
+      title.textContent = String(labels[index]);
+      rectangle.append(title);
+      layer.append(rectangle);
     }
   }
   function showLayers() {
@@ -660,9 +671,9 @@
     const svg = svgEl("svg", { viewBox: "0 0 1 1", preserveAspectRatio: "none", "aria-hidden": "true" });
     dentistLayer = svgEl("g", {});
     modelLayer = svgEl("g", {});
-    const lesions = Array.isArray(film.lesions) ? film.lesions : [];
-    drawBoxes(dentistLayer, film.boxes || [], "var(--box-dentist)", false);
-    drawBoxes(modelLayer, lesions.map((lesion) => lesion.box), "var(--box-model)", true);
+    const predictions = film.predictions;
+    drawBoxes(dentistLayer, film.boxes, film.labels, "var(--box-dentist)", false);
+    drawBoxes(modelLayer, predictions.map((prediction) => prediction.box), predictions.map((prediction) => prediction.label), "var(--box-model)", true);
     svg.append(dentistLayer, modelLayer);
     const path = localPath(film.image_path, true);
     if (path) {
@@ -687,12 +698,23 @@
     renderFilmImage(film);
     $("id-film").textContent = film.film;
     $("id-status").textContent = statusText(film);
-    $("ov-answer").textContent = typeof film.reply === "string" && film.reply.trim() ? film.reply : "No reply.";
+    switch (film.answer_source) {
+      case "report.json":
+        $("answer-title").textContent = "report.json";
+        $("ov-answer").textContent = film.reply ?? "No report was submitted. The scorer treats this as no findings.";
+        break;
+      case "final_reply":
+        $("answer-title").textContent = "final answer";
+        $("ov-answer").textContent = film.reply ?? "No final reply.";
+        break;
+      default:
+        throw new Error(`Unknown answer source: ${film.answer_source}`);
+    }
     const download = localPath(film.trace_path);
     $("trace-download").hidden = !download;
     if (download) $("trace-download").href = download;
     else $("trace-download").removeAttribute("href");
-    showNotes(listOf(film.errors), []);
+    showNotes(listOf(film.errors), [...listOf(film.warnings), ...(film.score_note ? [film.score_note] : [])]);
   }
 
   // ---- Trace loading.
@@ -705,7 +727,8 @@
     const nodes = Array.isArray(trace?.nodes) ? trace.nodes : [];
     conversation = nodes.length ? conversationOf(trace)
       : (activeTrace.prompt ?? []).map((message) => ({ kind: "message", message, call: null }));
-    showNotes([...listOf(film.errors), ...listOf(attempt.errors)], listOf(attempt.warnings));
+    showNotes([...listOf(film.errors), ...listOf(attempt.errors)],
+      [...listOf(film.warnings), ...listOf(attempt.warnings), ...(film.score_note ? [film.score_note] : [])]);
     renderTraceOverview(film, trace, messagesOf(conversation));
     renderConversation(trace, caseId);
   }
@@ -806,24 +829,48 @@
     $("trace-download").hidden = true;
     $("conversation").replaceChildren(el("p", { class: "pv-empty" }, message));
   }
-  async function loadRun(requestedFilm = null) {
+  async function loadBenchmark(requestedFilm = null) {
     const request = ++loadId;
-    const entry = entries.find((item) => item.id === $("run-select").value);
-    if (!entry) return;
+    const benchmark = catalog.find((item) => item.id === $("benchmark-select").value);
+    if (!benchmark) {
+      $("run-meta").textContent = "Unknown benchmark.";
+      clearCases("Choose a benchmark from the list.");
+      return;
+    }
+    const entry = entries.find((item) => item.id === benchmark.sample_run && item.benchmark === benchmark.id);
+    if (!entry || !complete(entry)) throw new Error("The benchmark has no complete sample run");
+    selection = { benchmark, entry };
     clearCases("Loading…");
-    $("run-meta").textContent = complete(entry) ? `score ${score(entry.mean_reward)}` : `${entry.succeeded}/${entry.expected} films`;
-    setUrl({ run: entry.id, film: null });
+    document.title = `${benchmark.name} traces · PanoRead`;
+    $("trace-title").textContent = `${benchmark.short_name} traces`;
+    $("run-meta").textContent = `${entry.name} · full-run score ${score(entry.mean_reward)} · ${entry.expected} films`;
+    $("sample-note").textContent = `${benchmark.selection} ${benchmark.score_note ?? ""}`.trim();
+    $("benchmark-link").href = `benchmark.html?benchmark=${encodeURIComponent(benchmark.id)}`;
+    $("traces-link").href = `traces.html?benchmark=${encodeURIComponent(benchmark.id)}`;
+    $("dataset-link").href = benchmark.source.url;
+    $("dataset-link").hidden = false;
+    $("source-credit").replaceChildren(el("a", { href: benchmark.source.url }, benchmark.source.name),
+      document.createTextNode(` · ${benchmark.source.attribution} · ${benchmark.source.license}`));
+    const canonical = new URL($("traces-link").getAttribute("href"), "https://dylantirandaz.com/periapical-rl/");
+    document.querySelector('link[rel="canonical"]').href = canonical.href;
+    document.querySelector('meta[property="og:url"]').content = canonical.href;
+    document.querySelector('meta[property="og:title"]').content = document.title;
+    setUrl({ benchmark: benchmark.id, run: null, film: null });
     try {
       const data = await fetchJson(`data/${encodeURIComponent(entry.id)}/evals/test_0000.json`);
       if (request !== loadId) return;
-      if (!Array.isArray(data)) throw new Error("Invalid case data");
+      if (!Array.isArray(data) || data.length !== 5 ||
+          data.some((film, index) => film.film !== benchmark.sample_films[index])) {
+        throw new Error("The five published examples do not match the benchmark catalog");
+      }
       films = data;
-      if (!films.length) {
-        clearCases(entry.reason || "No cases.");
+      renderFilmList();
+      const index = requestedFilm === null ? 0 : films.findIndex((film) => film.film === requestedFilm);
+      if (index < 0) {
+        clearCases("This film is not one of the five published examples. Select a benchmark to continue.");
         return;
       }
-      renderFilmList();
-      selectFilm(Math.max(0, films.findIndex((film) => film.film === requestedFilm)), { reveal: true });
+      selectFilm(index, { reveal: true });
     } catch (error) {
       if (request !== loadId) return;
       clearCases(`Unavailable: ${error.message}`);
@@ -871,20 +918,21 @@
   }
   async function main() {
     bindControls();
-    entries = await fetchJson("data/benchmarks.json");
-    if (!Array.isArray(entries)) throw new Error("Invalid benchmark index");
-    if (!entries.length) {
-      $("run-meta").textContent = "No runs.";
-      clearCases("No traces.");
+    [catalog, entries] = await Promise.all([fetchJson("data/catalog.json"), fetchJson("data/benchmarks.json")]);
+    if (!Array.isArray(catalog) || !Array.isArray(entries)) throw new Error("Invalid benchmark catalog");
+    const select = $("benchmark-select");
+    for (const benchmark of catalog) select.append(el("option", { value: benchmark.id }, benchmark.name));
+    const params = new URLSearchParams(location.search);
+    const requested = params.get("benchmark") ?? "periapical-lesions";
+    select.disabled = false;
+    select.addEventListener("change", () => void loadBenchmark());
+    if (!catalog.some((benchmark) => benchmark.id === requested)) {
+      $("run-meta").textContent = "Unknown benchmark.";
+      clearCases("Choose a benchmark from the list.");
       return;
     }
-    const select = $("run-select");
-    for (const entry of entries) select.append(el("option", { value: entry.id }, complete(entry) ? entry.name : `${entry.name} · unfinished`));
-    const params = new URLSearchParams(location.search);
-    if (entries.some((entry) => entry.id === params.get("run"))) select.value = params.get("run");
-    select.disabled = false;
-    select.addEventListener("change", () => loadRun());
-    await loadRun(params.get("film"));
+    select.value = requested;
+    await loadBenchmark(params.get("film"));
   }
   main().catch((error) => {
     $("run-meta").textContent = `Unavailable: ${error.message}`;
